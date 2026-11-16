@@ -1,6 +1,6 @@
 ## **이치오: Chioh Lee**  
-chio4696@pusan.ac.kr
-+82 10 4411 4696
+chio4696@pusan.ac.kr | 
++82 10 4411 4696 | 
 [https\://github.com/cho104](https://github.com/cho104)
 
 ### **Education (relevant courses)**
