@@ -178,7 +178,7 @@ export function projectCard(p, { onClose }) {
             : `<img src="${asset(m.src)}" alt="${esc(m.alt)}" loading="lazy">`,
         )
         .join('') + docTiles(p)
-    : `<div class="card-empty">media for this project goes here:<br>add images under it in README.md</div>`;
+    : `<div class="card-empty">camera-shy project :)<br>I forgot to take pictures</div>`;
   const chips = [p.org, p.org.includes(p.year) ? '' : p.year, ...p.tags].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('');
   const root = el(`<div class="card-wrap" role="dialog" aria-modal="true" aria-label="${esc(p.title)}">
     <article class="card">
