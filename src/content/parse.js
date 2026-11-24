@@ -9,6 +9,9 @@
 //                          optional images/videos (![alt](img/...)) and an optional line
 //                          "tags: A, B · 2025"
 //   ### Honors / ### Certificates   numbered items, **Title** + details
+//   Links in any entry: a bare URL or [label](url) on its own line or after the images becomes
+//   a link button (labelled from the site when no label is given); [label](img/....pdf|.html)
+//   attaches a local document (slides, report) that the build publishes with the site.
 // Phone numbers are scrubbed everywhere; contact output is email + GitHub only.
 
 import { fromMarkdown } from 'mdast-util-from-markdown';
@@ -65,6 +68,52 @@ function media(node) {
 
 const plain = (n) => toString(n, { includeImageAlt: false, includeHtml: false });
 
+// --- links and documents in an entry --------------------------------------------------------
+const URL_RE = /https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"]/g;
+const DOC = /\.(pdf|html?)$/i;
+// A readable label for a bare URL, from where it points.
+export function linkLabel(url) {
+  let u;
+  try { u = new URL(url); } catch { return url; }
+  const host = u.hostname.replace(/^www\./, '');
+  const parts = u.pathname.split('/').filter(Boolean);
+  if (host === 'github.com' && parts.length >= 2) return `GitHub · ${parts[1]}`;
+  if (host === 'github.com') return 'GitHub';
+  if (host === 'huggingface.co') return 'Hugging Face';
+  if (/isca-archive|arxiv|aclanthology|openreview/.test(host) || /\.pdf$/i.test(u.pathname)) return 'Paper (PDF)';
+  if (host === 'velog.io') return 'Blog post';
+  if (host === 'nationalcyberscholarship.org') return 'Winners list';
+  if (/notion\.(so|site|com)$/.test(host)) return 'Notion';
+  if (host === 'drive.google.com' || host === 'docs.google.com') return 'Google Drive';
+  return host;
+}
+// Pull the links out of an entry: [label](url) nodes and bare URLs in its text.
+// Local documents (img/....pdf/.html) come back separately.
+function linksIn(node) {
+  const links = [], docs = [], seen = new Set();
+  const add = (url, label) => {
+    url = url.trim();
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    if (!/^https?:/i.test(url)) {
+      const src = url.replace(/^\.?\//, '');
+      if (DOC.test(src)) docs.push({ src, label: label || src.split('/').pop(), kind: /\.pdf$/i.test(src) ? 'pdf' : 'html' });
+      return;
+    }
+    links.push({ url, label: label && label !== url ? label : linkLabel(url) });
+  };
+  for (const l of collect(node, 'link')) add(l.url, toString(l).trim());
+  for (const t of collect(node, 'text')) for (const m of t.value.matchAll(URL_RE)) add(m[0]);
+  for (const h of collect(node, 'html')) for (const m of h.value.replace(/<img\b[^>]*>/gi, '').matchAll(URL_RE)) add(m[0]);
+  return { links, docs };
+}
+// The text of an entry line with its links taken out.
+function stripLinks(line, labels) {
+  let out = line.replace(URL_RE, ' ');
+  for (const l of labels) if (l) out = out.split(l).join(' ');
+  return out.replace(/\s{2,}/g, ' ').trim();
+}
+
 // Splits the document into { name, key, nodes } by "###" headings.
 function sections(tree) {
   const out = [];
@@ -98,7 +147,8 @@ function entry(item) {
   const title = strong ? toString(strong).trim() : toString(item).split('\n')[0].trim();
   const full = plain(item);
   const rest = full.slice(full.indexOf(title) + title.length);
-  const lines = rest.split('\n').map((l) => l.trim()).filter(Boolean);
+  const labels = collect(item, 'link').map((l) => toString(l).trim());
+  const lines = rest.split('\n').map((l) => stripLinks(l.trim(), labels)).filter(Boolean);
 
   let org = '';
   let meta = '';
@@ -121,6 +171,7 @@ function entry(item) {
     }
   }
 
+  const { links, docs } = linksIn(item);
   let tags = [];
   const body = [];
   for (const line of lines) {
@@ -147,6 +198,8 @@ function entry(item) {
     tags,
     year,
     media: media(item),
+    links,
+    docs,
   };
 }
 
@@ -160,6 +213,10 @@ function entries(nodes) {
     } else if (out.length) {
       const extra = media(node);
       if (extra.length) out[out.length - 1].media.push(...extra);
+      const more = linksIn(node);
+      const last = out[out.length - 1];
+      for (const l of more.links) if (!last.links.some((x) => x.url === l.url)) last.links.push(l);
+      last.docs.push(...more.docs);
       const tagLine = toString(node).match(/^tags\s*:\s*(.*)$/im);
       if (tagLine) {
         const [list, y] = tagLine[1].split('·').map((s) => s.trim());
@@ -245,6 +302,9 @@ function html(node) {
   }
 }
 
+// First-page preview of a document, written by `npm run images`: slides.pdf → slides.pdf.thumb.jpg
+export const docThumb = (src) => `${src}.thumb.jpg`;
+
 export function parseReadme(markdown, { exists = () => false } = {}) {
   const thumbPath = (src) => src.replace(/\.(jpe?g|png|webp)$/i, '.thumb.jpg');
   thumbOf = (src) => (exists(thumbPath(src)) ? thumbPath(src) : src);
@@ -300,9 +360,14 @@ export function parseReadme(markdown, { exists = () => false } = {}) {
   const groups = [data.about.photos, ...[...data.projects, ...data.honors, ...data.certificates].map((e) => e.media)];
   for (const list of groups) for (const m of list) if (m.kind === 'image') m.thumb = thumbOf(m.src);
   const local = (s) => s && !/^https?:/i.test(s);
+  const docs = [...data.projects, ...data.honors, ...data.certificates].flatMap((e) => e.docs);
+  for (const d of docs) d.thumb = exists(docThumb(d.src)) ? docThumb(d.src) : '';
   data.mediaFiles = [
     ...new Set(
-      [...groups.flat(), ...media(tree)].flatMap((m) => [m.src, m.thumb || thumbOf(m.src)]).filter(local),
+      [
+        ...[...groups.flat(), ...media(tree)].flatMap((m) => [m.src, m.thumb || thumbOf(m.src)]),
+        ...docs.flatMap((d) => [d.src, d.thumb]),
+      ].filter(local),
     ),
   ];
 

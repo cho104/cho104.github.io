@@ -22,7 +22,7 @@ for (const file of data.mediaFiles) {
 if (existsSync(join(root, 'resume.pdf'))) copyFileSync(join(root, 'resume.pdf'), join(dist, 'resume.pdf'));
 
 const html = readFileSync(join(dist, 'index.html'), 'utf8');
-const routes = ['works', 'about', 'coursework', 'resume', 'contact', 'readme', ...data.projects.map((p) => `works/${p.slug}`)];
+const routes = ['works', 'about', 'coursework', 'resume', 'contact', 'readme', 'resume/print', ...data.projects.map((p) => `works/${p.slug}`)];
 for (const r of routes) {
   mkdirSync(join(dist, r), { recursive: true });
   writeFileSync(join(dist, r, 'index.html'), html);

@@ -103,3 +103,17 @@ Text here.
   assert.ok(d.mediaFiles.includes('img/about/a.thumb.jpg'));
   assert.match(d.readmeHtml, /<img class="thumb" src="\/img\/about\/a\.thumb\.jpg"/);
 });
+
+test('links and documents come out of the description', () => {
+  const d = parseReadme(`### Projects
+1. **Linked** (Lab)
+Built it.
+<img src="img/x/a.jpg" width="160"> https://github.com/me/repo [Slides: Talk](img/x/talk.pdf)
+https://www.isca-archive.org/x/paper.pdf
+`, { exists: (p) => p === 'img/x/talk.pdf.thumb.jpg' });
+  const [p] = d.projects;
+  assert.equal(p.description, 'Built it.');
+  assert.deepEqual(p.links.map((l) => l.label), ['GitHub · repo', 'Paper (PDF)']);
+  assert.deepEqual(p.docs, [{ src: 'img/x/talk.pdf', label: 'Slides: Talk', kind: 'pdf', thumb: 'img/x/talk.pdf.thumb.jpg' }]);
+  assert.ok(d.mediaFiles.includes('img/x/talk.pdf') && d.mediaFiles.includes('img/x/talk.pdf.thumb.jpg'));
+});

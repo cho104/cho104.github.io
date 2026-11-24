@@ -22,7 +22,10 @@ const phone =
   matchMedia('(max-width: 760px)').matches ||
   matchMedia('(pointer: coarse) and (max-width: 1100px)').matches;
 
-if (phone || !hasWebGL() || location.pathname.replace(/\/$/, '') === '/readme') {
+const path = location.pathname.replace(/\/$/, '');
+if (path === '/resume/print') {
+  import('./ui/print.js').then(({ renderPrint }) => renderPrint(content));
+} else if (phone || !hasWebGL() || path === '/readme') {
   renderReadme(content);
 } else {
   import('./app.js').then(({ start }) => start(content));

@@ -5,6 +5,23 @@ import { handLink, drawIn } from './hand.js';
 const esc = (s = '') =>
   String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const asset = (src) => '/' + src.replace(/^\.?\//, '');
+// Outside links and attached documents of a project or honor.
+const linkList = (p, cls = 'links', withDocs = true) =>
+  p.links?.length || (withDocs && p.docs?.length)
+    ? `<div class="${cls}">${[
+        ...(withDocs ? p.docs || [] : []).map((d) => `<a href="${asset(d.src)}" target="_blank" rel="noopener">${esc(d.label)}</a>`),
+        ...(p.links || []).map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.label)}</a>`),
+      ].join('')}</div>`
+    : '';
+// Documents in a card: first-page previews that open the file.
+const docTiles = (p) =>
+  (p.docs || [])
+    .map(
+      (d) => `<a class="doc" href="${asset(d.src)}" target="_blank" rel="noopener">
+        ${d.thumb ? `<img src="${asset(d.thumb)}" alt="" loading="lazy">` : `<span class="doc-blank">${d.kind.toUpperCase()}</span>`}
+        <span class="doc-label">${esc(d.label)} <i>${d.kind === 'pdf' ? 'PDF' : 'report'} ↗</i></span></a>`,
+    )
+    .join('');
 
 function el(html) {
   const t = document.createElement('template');
@@ -24,22 +41,23 @@ export function worksView(content, { mode, onMode }) {
       <button type="button" data-m="index" aria-pressed="${mode === 'index'}">Index</button>
     </div>
     ${mode === 'featured' ? '<p class="works-caption" aria-live="polite"></p>' : ''}
-    <div class="works-back">${handLink({ href: '/', text: 'back to the desk', attrs: 'data-link' })}</div>
   </div>`);
   root.querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => onMode(b.dataset.m)));
 
   if (mode === 'index') {
     const idx = el(`<div class="index fade-in"><p>${content.projects
-      .map((p, i) => `<a href="/works/${p.slug}" data-link data-i="${i}">${esc(p.title)}</a>`)
-      .join(' <span class="dot">·</span> ')}</p><div class="preview"></div></div>`);
+      .map((p, i) => `<a href="/works/${p.slug}" data-link data-i="${i}" aria-label="${esc(p.title)}">${letters(p.title)}</a>`)
+      .join(' <span class="dot ch" aria-hidden="true">·</span> ')}</p><div class="preview"></div></div>`);
     const preview = idx.querySelector('.preview');
     const links = [...idx.querySelectorAll('a')];
+    const lens = fisheye(idx.querySelector('p'));
     let x = 0, y = 0, px = 0, py = 0, raf = 0;
     const follow = () => {
       px += (x - px) * 0.18;
       py += (y - py) * 0.18;
       const skew = Math.max(-12, Math.min(12, (x - px) * 0.06));
       preview.style.transform = `translate(${px}px, ${py}px) translate(-50%, -50%) skewX(${-skew}deg) rotate(${skew * 0.3}deg)`;
+      lens.frame(x, y);
       raf = requestAnimationFrame(follow);
     };
     idx.addEventListener('pointermove', (e) => {
@@ -55,9 +73,9 @@ export function worksView(content, { mode, onMode }) {
       a.addEventListener('pointerenter', () => {
         const p = content.projects[i];
         idx.classList.add('is-hovering');
+        lens.on(true);
         links.forEach((b, j) => {
           b.classList.toggle('on', i === j);
-          b.classList.toggle('near', Math.abs(i - j) <= 2 && i !== j);
         });
         const m = p.media[0];
         preview.innerHTML = m
@@ -69,28 +87,99 @@ export function worksView(content, { mode, onMode }) {
       });
       a.addEventListener('pointerleave', () => {
         idx.classList.remove('is-hovering');
+        lens.on(false);
         preview.classList.remove('on');
       });
     });
     root.prepend(idx);
-    root._cleanup = () => cancelAnimationFrame(raf);
+    root._cleanup = () => {
+      cancelAnimationFrame(raf);
+      lens.destroy();
+    };
   }
   drawIn(root);
   return root;
 }
 
+// each letter in its own span, so the lens can move and size it on its own
+const letters = (t) =>
+  esc(t).replace(/(&[a-z#0-9]+;|\S)/gi, '<span class="ch" aria-hidden="true">$1</span>');
+
+// Index lens: a magnifying-glass bulge that follows the pointer over the titles. Inside a
+// radius R, a letter at distance r is moved out to g(r/R)·R and sized by how much g stretches
+// there: big under the pointer, a little squeezed toward the rim, untouched beyond it (g is
+// smooth at the rim, so nothing jumps). It swells in while a title is hovered, eases out after.
+function fisheye(para) {
+  const chars = [...para.querySelectorAll('.ch')];
+  const K = 1.1; // strength: letters under the pointer grow to 1 + K
+  const g = (u) => u + K * u * (1 - u) * (1 - u);
+  const dg = (u) => 1 + K * (1 - u) * (1 - 3 * u);
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let rest = null, R = 160, want = 0, amt = 0;
+  let bent = new Set(); // letters the lens is currently moving
+
+  // where each letter sits with no lens (page coordinates; the index is fixed, so they hold)
+  function measure() {
+    for (const k of bent) chars[k].style.transform = '';
+    bent.clear();
+    rest = new Float32Array(chars.length * 2);
+    chars.forEach((c, k) => {
+      const r = c.getBoundingClientRect();
+      rest[k * 2] = r.left + r.width / 2;
+      rest[k * 2 + 1] = r.top + r.height / 2;
+    });
+    R = parseFloat(getComputedStyle(para).fontSize) * 5.5;
+  }
+  const remeasure = () => (rest = null);
+  addEventListener('resize', remeasure);
+  document.fonts?.ready.then(remeasure);
+
+  return {
+    on(v) { want = v && !still ? 1 : 0; },
+    frame(x, y) {
+      amt += (want - amt) * 0.2;
+      if (want === 0 && amt < 0.002) {
+        amt = 0;
+        if (bent.size) {
+          for (const k of bent) chars[k].style.transform = '';
+          bent.clear();
+        }
+        return;
+      }
+      if (!rest) measure();
+      const R2 = R * R;
+      const next = new Set();
+      for (let k = 0; k < chars.length; k++) {
+        const vx = rest[k * 2] - x, vy = rest[k * 2 + 1] - y;
+        const d2 = vx * vx + vy * vy;
+        if (d2 >= R2) continue;
+        // push outward along the ray from the pointer; size by the local stretch
+        const u = Math.sqrt(d2) / R;
+        const f = u > 1e-4 ? g(u) / u : 1 + K;
+        const s = 1 + (Math.sqrt(Math.max(0.3, dg(u) * f)) - 1) * amt;
+        const t = (f - 1) * amt;
+        chars[k].style.transform = `translate(${(vx * t).toFixed(1)}px,${(vy * t).toFixed(1)}px) scale(${s.toFixed(3)})`;
+        next.add(k);
+      }
+      for (const k of bent) if (!next.has(k)) chars[k].style.transform = '';
+      bent = next;
+    },
+    destroy() { removeEventListener('resize', remeasure); },
+  };
+}
+
 // Project card (Jesper): text pinned left, media scrolling right; edges bend with scroll speed.
 export function projectCard(p, { onClose }) {
-  const media = p.media.length
+  const media = p.media.length || p.docs?.length
     ? p.media
         .map((m) =>
           m.kind === 'video'
             ? `<video src="${asset(m.src)}" muted autoplay loop playsinline controls></video>`
             : `<img src="${asset(m.src)}" alt="${esc(m.alt)}" loading="lazy">`,
         )
-        .join('')
+        .join('') + docTiles(p)
     : `<div class="card-empty">media for this project goes here:<br>add images under it in README.md</div>`;
-  const chips = [p.org, p.year, ...p.tags].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('');
+  const chips = [p.org, p.org.includes(p.year) ? '' : p.year, ...p.tags].filter(Boolean).map((c) => `<span class="chip">${esc(c)}</span>`).join('');
   const root = el(`<div class="card-wrap" role="dialog" aria-modal="true" aria-label="${esc(p.title)}">
     <article class="card">
       <button class="card-close" type="button" aria-label="Close">×</button>
@@ -100,6 +189,7 @@ export function projectCard(p, { onClose }) {
           <h2>${esc(p.title)}</h2>
           <p>${esc(p.description)}</p>
           <div class="chips">${chips}</div>
+          ${linkList(p, 'card-links', false)}
         </div>
         <div class="card-media">${media}</div>
       </div>
@@ -138,8 +228,19 @@ export function aboutView(content) {
   const root = el(`<section class="about fade-in" aria-label="About">
     <h2>hello,</h2>
     ${bio}
-    <p class="hint-inline" style="color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase">Drag to spin the photos</p>
+    <p class="hint-inline" style="color:var(--muted);font-size:12px;letter-spacing:.1em;text-transform:uppercase">Drag or scroll to spin the photos</p>
   </section>`);
+  return root;
+}
+
+// Coursework and Resume are loose sheets of paper on the desk. The sheet element goes on
+// <body> so it can fly above the huge page title; app.js animates it out of / back onto the
+// 3D sheet (ui/paper.js).
+function sheetView(sheet) {
+  const root = el(`<div></div>`);
+  document.body.appendChild(sheet);
+  root._sheet = sheet;
+  root._cleanup = () => sheet.remove();
   return root;
 }
 
@@ -150,33 +251,13 @@ export function courseworkView(content) {
       <ol>${s.courses.map((c) => `<li class="${c.current ? 'now' : ''}">${esc(c.name)}</li>`).join('')}</ol>`,
     )
     .join('');
-  const page = el(`<section class="notebook" aria-label="Coursework">${schools}</section>`);
-  // Slides out of the 3D notebook: starts at the notebook's place on screen, lying flat,
-  // then lifts up to the reading position.
-  page._emerge = (from) => {
-    const to = page.getBoundingClientRect();
-    gsap.set(page, { visibility: 'visible', transformPerspective: 1400, transformOrigin: '50% 100%' });
-    if (!from) return gsap.fromTo(page, { opacity: 0, y: 20 }, { opacity: 1, y: 0, rotation: -1.2, duration: 0.6 });
-    gsap.fromTo(
-      page,
-      {
-        // bottom edge on the open pages (right part of the notebook's box, which includes the cover)
-        x: from.left + from.width * 0.62 - (to.left + to.width / 2),
-        y: from.top + from.height * 0.85 - (to.top + to.height),
-        scale: Math.min(1, from.width / to.width),
-        rotationX: 72,
-        rotation: 8,
-        opacity: 0.4,
-      },
-      { x: 0, y: 0, scale: 1, rotationX: 0, rotation: -1.2, opacity: 1, duration: 1.3, ease: 'power3.inOut' },
-    );
-  };
-  return page;
+  return sheetView(el(`<section class="notebook paper-sheet" aria-label="Coursework">${schools}</section>`));
 }
 
-export function resumeView(content) {
+// The resume itself (also used by the print page, /resume/print).
+export function resumeBody(content, { photos: withPhotos = true } = {}) {
   const photos = (p) =>
-    p.media.length
+    withPhotos && p.media.length
       ? `<div class="resume-photos">${p.media
           .filter((m) => m.kind === 'image')
           .map((m) => `<a href="${asset(m.src)}" target="_blank" rel="noopener"><img src="${asset(m.thumb || m.src)}" alt="${esc(m.alt || p.title)}" loading="lazy"></a>`)
@@ -185,44 +266,51 @@ export function resumeView(content) {
   const list = (items, { withDesc = true, withPhotos = false } = {}) =>
     `<ol>${items
       .map(
-        (p) => `<li><span><strong>${esc(p.title)}</strong>${p.org ? ` <span class="org">· ${esc(p.org)}</span>` : ''}${p.meta && !/^\(?\d{4}\)?$/.test(p.meta) ? ` <span class="org">· ${esc(p.meta.replace(/\s*\(\d{4}\)$/, ''))}</span>` : ''}</span>
+        (p) => `<li><span><strong>${esc(p.title)}</strong>${p.org ? ` <span class="org">· ${esc(p.year ? p.org.replace(new RegExp(`[,\\s]*${p.year}$`), '') : p.org)}</span>` : ''}${p.meta && !/^\(?\d{4}\)?$/.test(p.meta) ? ` <span class="org">· ${esc(p.meta.replace(/\s*\(\d{4}\)$/, ''))}</span>` : ''}</span>
         <span class="yr">${esc(p.year || '')}</span>
         ${withDesc && p.description ? `<p>${esc(p.description)}</p>` : ''}
+        ${linkList(p, 'resume-links')}
         ${withPhotos ? photos(p) : ''}</li>`,
       )
       .join('')}</ol>`;
   const edu = `<ol>${content.education
     .map((s) => `<li><span><strong>${esc(s.name)}</strong></span><span class="yr"></span><p>${esc(s.detail)}</p></li>`)
     .join('')}</ol>`;
-  const root = el(`<section class="resume fade-in" aria-label="Resume">
-    <div class="resume-pdf" hidden>${handLink({ href: '/resume.pdf', text: 'download PDF', attrs: 'download' })}</div>
+  return `<header class="resume-head"><h2>${esc(content.name || '')}</h2><p>${esc([content.contact.email, content.contact.github].filter(Boolean).join('  ·  '))}</p></header>
     <div class="resume-grid">
       <h3>Education</h3>${edu}
       <h3>Projects &amp; leadership</h3>${list(content.projects)}
       <h3>Honors</h3>${list(content.honors, { withDesc: false, withPhotos: true })}
       <h3>Certificates</h3>${list(content.certificates)}
+    </div>`;
+}
+
+export function resumeView(content) {
+  const sheet = el(`<section class="resume paper-sheet" aria-label="Resume">
+    <div class="resume-tools">
+      ${handLink({ href: '/resume/print', text: 'print / save', attrs: 'target="_blank" rel="noopener"' })}
+      <span class="resume-pdf" hidden>${handLink({ href: '/resume.pdf', text: 'download PDF', attrs: 'download' })}</span>
     </div>
+    ${resumeBody(content)}
   </section>`);
-  // the huge title is fixed; fade it out as the resume scrolls under it
-  const title = document.querySelector('.page-title');
-  root.addEventListener('scroll', () => {
-    title.style.opacity = String(Math.max(0, 1 - root.scrollTop / 220));
-  });
-  root._cleanup = () => (title.style.opacity = '');
+  drawIn(sheet);
   fetch('/resume.pdf', { method: 'HEAD' })
     .then((r) => {
       if (r.ok && (r.headers.get('content-type') || '').includes('pdf')) {
-        root.querySelector('.resume-pdf').hidden = false;
-        drawIn(root);
+        sheet.querySelector('.resume-pdf').hidden = false;
+        drawIn(sheet);
       }
     })
     .catch(() => {});
-  return root;
+  return sheetView(sheet);
 }
 
 export function contactView(content) {
   const c = content.contact;
-  const root = el(`<section class="contact fade-in" aria-label="Contact">
+  // a note card beside the phone: its own paper, so it reads the same over the desk mat,
+  // the desk or the lamp light, in either theme
+  const root = el(`<section class="contact paper-sheet fade-in" aria-label="Contact">
+    <h2>say hi,</h2>
     ${c.email ? `<button class="big email" type="button" title="Click to copy">${esc(c.email)}</button>` : ''}
     ${c.githubUrl ? `<a class="big" href="${esc(c.githubUrl)}" target="_blank" rel="noopener">${esc(c.github)}</a>` : ''}
   </section>`);
@@ -246,4 +334,11 @@ function splash(word, small) {
     .timeline({ onComplete: () => s.remove() })
     .fromTo(s, { scale: 0.4, rotation: -8, opacity: 0 }, { scale: 1, rotation: -3, opacity: 1, duration: 0.5, ease: 'back.out(2.2)' })
     .to(s, { opacity: 0, y: -16, duration: 0.4, ease: 'power2.in' }, '+=1.1');
+}
+
+// "back to the desk": the same handwritten link on every page but the desk itself.
+export function backLink() {
+  const b = el(`<div class="back">${handLink({ href: '/', text: 'back to the desk', attrs: 'data-link' })}</div>`);
+  drawIn(b);
+  return b;
 }

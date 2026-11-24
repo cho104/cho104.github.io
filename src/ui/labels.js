@@ -6,12 +6,23 @@ import { arrowSVG } from './hand.js';
 const layer = () => document.getElementById('labels');
 let el = null;
 let shownId = null;
+let shownText = null;
 
 export function showLabel(id, text) {
-  if (shownId === id) return;
+  if (shownId === id) {
+    // same object, new words (the lamp: "lights off" ↔ "lights on"): rewrite them in place
+    if (text !== shownText && el) {
+      shownText = text;
+      const span = el.querySelector('span');
+      span.textContent = text;
+      gsap.fromTo(span, { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: 0.5, ease: 'power2.out' });
+    }
+    return;
+  }
   hideLabel();
   if (!id) return;
   shownId = id;
+  shownText = text;
   el = document.createElement('div');
   el.className = 'label';
   el.innerHTML = `<span>${text}</span>${arrowSVG('down')}`;
@@ -27,6 +38,7 @@ export function hideLabel() {
   const old = el;
   el = null;
   shownId = null;
+  shownText = null;
   gsap.to(old, { opacity: 0, duration: 0.2, onComplete: () => old.remove() });
 }
 

@@ -109,12 +109,14 @@ export function laptopScreen(theme) {
   });
 }
 
-export function phoneScreen(on, contact) {
+export function phoneScreen(on, contact, theme = 'light') {
+  const dark = theme === 'dark';
   return canvasTex(390, 844, (ctx, w, h) => {
-    ctx.fillStyle = on ? '#f7f7f5' : '#0b0d0f';
+    ctx.fillStyle = !on ? '#0b0d0f' : dark ? '#121417' : '#f7f7f5';
     ctx.fillRect(0, 0, w, h);
     if (!on) return;
-    ctx.fillStyle = '#1d252d';
+    const ink = dark ? '#ededea' : '#1d252d';
+    ctx.fillStyle = ink;
     ctx.font = '600 22px "Instrument Sans", sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('9:41', 48, 52);
@@ -124,10 +126,10 @@ export function phoneScreen(on, contact) {
     ctx.beginPath();
     ctx.roundRect(w / 2 - 62, 18, 124, 36, 18);
     ctx.fill();
-    ctx.fillStyle = '#1d252d';
+    ctx.fillStyle = ink;
     ctx.font = '400 92px "Reenie Beanie", cursive';
     ctx.fillText('say hi', w / 2, 330);
-    ctx.fillStyle = '#004c97';
+    ctx.fillStyle = dark ? '#4d8fe0' : '#004c97';
     ctx.font = '500 21px "Instrument Sans", sans-serif';
     ctx.fillText(contact.email || '', w / 2, 420);
     ctx.fillText(contact.github || '', w / 2, 460);

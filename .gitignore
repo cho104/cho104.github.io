@@ -2,3 +2,10 @@ node_modules/
 dist/
 .DS_Store
 img/_originals/
+*.log
+.env*
+.vite/
+.vscode/
+.idea/
+*.swp
+Thumbs.db

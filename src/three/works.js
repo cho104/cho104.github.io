@@ -1,5 +1,7 @@
-// "Inside the MacBook": a floor grid and a ring of curved project panels (Jesper-style).
-// Scrolling turns the ring; panels bend with scroll speed.
+// "Inside the MacBook": a ring of curved project panels (Jesper-style) in front of a
+// wallpaper of sky and a grassy hill.
+// Scrolling turns the ring; panels bend with scroll speed. The ring is closed and loops: past
+// the last project comes the first again, in either direction.
 import * as THREE from 'three';
 import { panelTexture } from './textures.js';
 
@@ -43,13 +45,83 @@ const panelFragment = /* glsl */ `
   }
 `;
 
-function grid(theme) {
-  const dark = theme === 'dark';
-  const g = new THREE.GridHelper(80, 80, dark ? '#3a434c' : '#c9cdd0', dark ? '#3a434c' : '#d0d3d4');
-  g.position.y = -1.35;
-  g.material.transparent = true;
-  g.material.opacity = 0.9;
-  return g;
+// The wallpaper: drawn straight in screen space behind everything, cover-fitted to whatever
+// camera is looking (the window, or the MacBook screen on the desk). The hill is a cut-out laid
+// over the sky; as the ring turns both drift the same way, the hill a little and the sky less,
+// so they read as far away. Mirrored at the edges, so the drift never runs out. At night the
+// same picture goes dim and blue.
+const backVertex = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = vec4(position.xy, 0.9999, 1.0);
+  }
+`;
+const backFragment = /* glsl */ `
+  uniform sampler2D uSky;
+  uniform sampler2D uHill;
+  uniform float uAspect;     // the view
+  uniform float uSkyAspect;
+  uniform float uHillAspect;
+  uniform float uShift;      // ring turn, in panels
+  uniform float uNight;
+  varying vec2 vUv;
+  vec2 cover(vec2 uv, float outer, float inner) {
+    return (uv - 0.5) * vec2(min(outer / inner, 1.0), min(inner / outer, 1.0)) + 0.5;
+  }
+  const float FRAME = 1.6;  // the wallpaper is framed 16:10
+  const float CREST = 0.4;  // the hilltop sits this far up the frame, behind the panels' lower half
+  const float TOP = 0.72;   // where the crest is in the hill picture (from the bottom)
+  void main() {
+    vec2 w = cover(vUv, uAspect, FRAME);
+    vec2 su = cover(w, FRAME, uSkyAspect);
+    su.x += uShift * 0.02;
+    // the hill spans the frame's width; lowered so its crest lands on CREST
+    float hh = FRAME / uHillAspect;
+    vec2 hu = vec2(w.x + uShift * 0.05, (w.y + TOP * hh - CREST) / hh);
+    vec4 hill = texture2D(uHill, hu);
+    vec3 c = mix(texture2D(uSky, su).rgb, hill.rgb, hill.a);
+    // night: darker, bluer, a little flatter
+    float l = dot(c, vec3(0.299, 0.587, 0.114));
+    vec3 night = mix(vec3(l), c, 0.55) * vec3(0.16, 0.2, 0.32) + vec3(0.012, 0.016, 0.03);
+    gl_FragColor = vec4(mix(c, night, uNight), 1.0);
+    #include <colorspace_fragment>
+  }
+`;
+
+function backdrop(theme, renderer) {
+  const loader = new THREE.TextureLoader();
+  const tex = (src, aspect) => {
+    const t = loader.load(src, () => {
+      u[aspect].value = t.image.width / t.image.height;
+      renderer.initTexture(t); // onto the GPU now, not mid-transition
+    });
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = THREE.MirroredRepeatWrapping;
+    t.minFilter = THREE.LinearFilter; // no mipmaps: the mirrored edge stays seamless
+    t.generateMipmaps = false;
+    return t;
+  };
+  const u = {
+    uSky: { value: null },
+    uHill: { value: null },
+    uAspect: { value: 1.6 },
+    uSkyAspect: { value: 1920 / 921 },
+    uHillAspect: { value: 2560 / 1350 },
+    uShift: { value: 0 },
+    uNight: { value: theme === 'dark' ? 1 : 0 },
+  };
+  u.uSky.value = tex('/works/sky.jpg', 'uSkyAspect');
+  u.uHill.value = tex('/works/hill.webp', 'uHillAspect');
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(2, 2),
+    new THREE.ShaderMaterial({ vertexShader: backVertex, fragmentShader: backFragment, uniforms: u, depthTest: false, depthWrite: false }),
+  );
+  m.frustumCulled = false;
+  m.renderOrder = -1;
+  // each camera that draws the works scene has its own shape
+  m.onBeforeRender = (_r, _s, camera) => (u.uAspect.value = camera.aspect ?? 1.6);
+  return { mesh: m, uniforms: u };
 }
 
 export function buildWorks({ content, theme, renderer }) {
@@ -57,17 +129,24 @@ export function buildWorks({ content, theme, renderer }) {
   const projects = content.projects;
   const n = Math.max(projects.length, 1);
   const step = (PANEL_W + GAP);
-  const radius = Math.max(5.2, (n * step) / (Math.PI * 2));
+  // the panels go all the way round with no hole, so turning past the last one simply
+  // carries on into the first. With only a few projects the list repeats to close the ring.
+  const copies = Math.max(1, Math.ceil((2 * Math.PI * 5.2) / (n * step)));
+  const slots = projects.length ? n * copies : 0;
+  const radius = (slots * step || 2 * Math.PI * 5.2) / (Math.PI * 2);
   const angle = step / radius;
+  const order = Array.from({ length: slots }, (_, k) => k % n);
 
   const ring = new THREE.Group();
   ring.position.y = -0.42; // sit below the huge page title
   scene.add(ring);
-  let floor = grid(theme);
-  scene.add(floor);
+  const back = backdrop(theme, renderer);
+  scene.add(back.mesh);
+  let night = theme === 'dark' ? 1 : 0;
 
   const loader = new THREE.TextureLoader();
-  const panels = projects.map((p, i) => {
+  const panels = order.map((i, slot) => {
+    const p = projects[i];
     const geo = new THREE.CylinderGeometry(radius, radius, PANEL_H, 40, 24, true, -angle / 2 + (GAP / radius) / 2, angle - GAP / radius);
     // CylinderGeometry UVs run around the outside; flip so the inside reads correctly.
     const uv = geo.attributes.uv;
@@ -83,7 +162,7 @@ export function buildWorks({ content, theme, renderer }) {
     const material = new THREE.ShaderMaterial({ vertexShader: panelVertex, fragmentShader: panelFragment, uniforms, side: THREE.BackSide });
     const m = new THREE.Mesh(geo, material);
     // CylinderGeometry's theta 0 points at +z; rotate so panel i faces the centre at angle i.
-    m.rotation.y = Math.PI - i * angle;
+    m.rotation.y = Math.PI - slot * angle;
     m.userData = { id: 'project', slug: p.slug, index: i };
     ring.add(m);
 
@@ -106,61 +185,58 @@ export function buildWorks({ content, theme, renderer }) {
           t.anisotropy = renderer.capabilities.getMaxAnisotropy();
           uniforms.uMap.value = t;
           uniforms.uImageAspect.value = t.image.width / t.image.height;
+          renderer.initTexture(t);
         });
       }
     }
     return { mesh: m, uniforms, project: p };
   });
 
-  // Scroll state: target / current rotation in "panel units".
+  // Scroll state: target / current rotation in "panel units" (unbounded: the ring loops).
   let target = 0;
   let current = 0;
-  let pull = 0; // scrolling up past the first panel pulls you back out to the desk
   let hovered = -1;
   let idle = 1; // seconds since the last scroll/drag; after a pause the ring snaps to a panel
 
   return {
     scene,
+    showRing(v) { ring.visible = v; },
     panels,
     count: n,
+    // scrolling only turns the ring, round and round; leaving is by the nav or "back to the desk"
     wheel(dy) {
       idle = 0;
-      const next = target + dy * 0.0016;
-      if (next < 0) {
-        pull += -next;
-        target = 0;
-      } else {
-        pull = Math.max(0, pull - dy * 0.0016);
-        target = Math.min(next, n - 1);
-      }
-      return pull > 0.55; // true → leave to the desk
+      target += dy * 0.0016;
     },
     drag(dx) {
       idle = 0;
-      target = Math.min(Math.max(0, target - dx * 0.0022), n - 1);
+      target -= dx * 0.0022;
     },
-    resetPull() { pull = 0; },
     // On the desk the MacBook screen shows the ring standing still, exactly where it was left.
     preview() {
       ring.rotation.y = current * angle;
+      back.uniforms.uShift.value = current;
+      back.uniforms.uNight.value += (night - back.uniforms.uNight.value) * 0.08; // the lamp, seen on the screen
       for (const pn of panels) {
         pn.uniforms.uBend.value *= 0.9;
         pn.uniforms.uHover.value *= 0.9;
       }
     },
-    goTo(i) { target = Math.min(Math.max(0, i), n - 1); },
-    get index() { return Math.round(current); },
+    // turn the short way round to a copy of project i
+    goTo(i) {
+      const d = (((i - Math.round(target)) % n) + n) % n;
+      target = Math.round(target) + (d > n / 2 ? d - n : d);
+    },
+    // the project in front, 0 .. n-1
+    get index() { return ((Math.round(current) % n) + n) % n; },
     hover(i) {
       hovered = i;
     },
     setTheme(t) {
       scene.background = new THREE.Color(t === 'dark' ? '#1d252d' : '#f7f7f5');
-      scene.remove(floor);
-      floor.geometry.dispose();
-      floor = grid(t);
-      scene.add(floor);
-      panels.forEach((pn, i) => {
-        if (!pn.project.media[0]) pn.uniforms.uMap.value = panelTexture(pn.project, i, t);
+      night = t === 'dark' ? 1 : 0;
+      panels.forEach((pn) => {
+        if (!pn.project.media[0]) pn.uniforms.uMap.value = panelTexture(pn.project, pn.mesh.userData.index, t);
       });
     },
     update(dt) {
@@ -170,6 +246,9 @@ export function buildWorks({ content, theme, renderer }) {
       current += (target - current) * Math.min(1, dt * 5);
       const vel = (current - prev) / Math.max(dt, 1e-3);
       ring.rotation.y = current * angle;
+      const bu = back.uniforms;
+      bu.uShift.value = current;
+      bu.uNight.value += (night - bu.uNight.value) * Math.min(1, dt * 4);
       for (const pn of panels) {
         const u = pn.uniforms;
         u.uBend.value += (THREE.MathUtils.clamp(vel * 0.35, -1, 1) - u.uBend.value) * Math.min(1, dt * 8);

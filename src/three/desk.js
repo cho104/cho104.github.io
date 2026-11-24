@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { laptopScreen, phoneScreen, photoPlaceholder } from './textures.js';
+import { sphereLayout } from './sphereLayout.js';
+import { duckling } from './duck.js';
 
 const TOP = 0.75;
 
@@ -22,8 +24,34 @@ function mesh(geo, material, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, cast
   return m;
 }
 
+// Small details on a nav object: no hover outline of their own (the object's main body has one).
+function fine(m) {
+  m.traverse((o) => (o.userData.noHull = true));
+  return m;
+}
+
+// A canvas texture (for grain, perforation and similar fine surface detail).
+function canvasTexture(w, h, draw, { repeat = [1, 1], srgb = true } = {}) {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(...repeat);
+  t.anisotropy = 4;
+  return t;
+}
+
 function tag(root, id) {
   root.traverse((o) => (o.userData.id = id));
+  return root;
+}
+
+// Decor that answers a hover with a handwritten note (never clickable, no outline).
+function note(root, key) {
+  root.traverse((o) => (o.userData.note = key));
   return root;
 }
 
@@ -36,7 +64,6 @@ const WALL_Z = -0.42;
 function room(scene) {
   const wallMat = mat('#ece5d8', { roughness: 0.95 });
   const floorMat = mat('#cbc2b3', { roughness: 1 });
-  const wood = mat('#93582c', { roughness: 0.55 });
   const plane = (w, h, x, y, z, ry = 0) => mesh(new THREE.PlaneGeometry(w, h), wallMat, { x, y, z, ry, cast: false });
 
   scene.add(mesh(new THREE.PlaneGeometry(12, 12), floorMat, { rx: -Math.PI / 2, cast: false }));
@@ -51,28 +78,76 @@ function room(scene) {
   // right wall
   scene.add(plane(4, H, R, H / 2, WALL_Z + 2, -Math.PI / 2));
 
-  // window: reveal (frame boards set into the wall), mullion, sill, roller blind
+  // window: reveal (frame boards set into the wall), mullion, sill, roller blind; a soft
+  // wood grain running along each board, and a rounded front edge on the sill
   const D = 0.12, t = 0.05;
   const cx = (WIN.x0 + WIN.x1) / 2, cy = (WIN.y0 + WIN.y1) / 2, w = WIN.x1 - WIN.x0, h = WIN.y1 - WIN.y0;
   const zIn = WALL_Z - D / 2;
+  const grain = (vertical) =>
+    canvasTexture(vertical ? 128 : 512, vertical ? 512 : 128, (ctx, gw, gh) => {
+      const along = vertical ? gh : gw, across = vertical ? gw : gh;
+      ctx.fillStyle = '#93582c';
+      ctx.fillRect(0, 0, gw, gh);
+      let seed = vertical ? 7 : 3;
+      const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+      for (let i = 0; i < 40; i++) {
+        const c = across * rnd(), amp = 1 + rnd() * 3, freq = 0.006 + rnd() * 0.01, ph = rnd() * 6;
+        ctx.strokeStyle = rnd() < 0.6 ? `rgba(80, 40, 15, ${0.04 + rnd() * 0.06})` : `rgba(180, 115, 65, ${0.03 + rnd() * 0.05})`;
+        ctx.lineWidth = 0.6 + rnd() * 1.6;
+        ctx.beginPath();
+        for (let q = 0; q <= along; q += 8) {
+          const p2 = c + Math.sin(q * freq + ph) * amp;
+          vertical ? ctx.lineTo(p2, q) : ctx.lineTo(q, p2);
+        }
+        ctx.stroke();
+      }
+    });
+  const woodH = mat('#ffffff', { roughness: 0.55, map: grain(false) });
+  const woodV = mat('#ffffff', { roughness: 0.55, map: grain(true) });
   scene.add(
-    mesh(new THREE.BoxGeometry(w, t, D), wood, { x: cx, y: WIN.y1 - t / 2, z: zIn }),
-    mesh(new THREE.BoxGeometry(w, t, D), wood, { x: cx, y: WIN.y0 + t / 2, z: zIn }),
-    mesh(new THREE.BoxGeometry(t, h, D), wood, { x: WIN.x0 + t / 2, y: cy, z: zIn }),
-    mesh(new THREE.BoxGeometry(t, h, D), wood, { x: WIN.x1 - t / 2, y: cy, z: zIn }),
-    mesh(new THREE.BoxGeometry(0.07, h, 0.06), wood, { x: WIN.mull, y: cy, z: WALL_Z - D + 0.03 }),
-    mesh(new THREE.BoxGeometry(w + 0.12, 0.03, 0.1), wood, { x: cx, y: WIN.y0 - 0.015, z: WALL_Z + 0.03 }),
+    mesh(new THREE.BoxGeometry(w, t, D), woodH, { x: cx, y: WIN.y1 - t / 2, z: zIn }),
+    mesh(new THREE.BoxGeometry(w, t, D), woodH, { x: cx, y: WIN.y0 + t / 2, z: zIn }),
+    mesh(new THREE.BoxGeometry(t, h, D), woodV, { x: WIN.x0 + t / 2, y: cy, z: zIn }),
+    mesh(new THREE.BoxGeometry(t, h, D), woodV, { x: WIN.x1 - t / 2, y: cy, z: zIn }),
+    mesh(new THREE.BoxGeometry(0.07, h, 0.06), woodV, { x: WIN.mull, y: cy, z: WALL_Z - D + 0.03 }),
+    // sill: ends flush with the frame, rounded along its front edge
+    mesh(new THREE.BoxGeometry(w, 0.03, 0.1), woodH, { x: cx, y: WIN.y0 - 0.015, z: WALL_Z + 0.03 }),
+    mesh(new THREE.CylinderGeometry(0.015, 0.015, w, 20), woodH, { x: cx, y: WIN.y0 - 0.015, z: WALL_Z + 0.08, rz: Math.PI / 2 }),
     mesh(new THREE.BoxGeometry(w - 0.1, 0.05, 0.05), mat('#4a4d52', { roughness: 0.8 }), { x: cx, y: WIN.y1 - 0.08, z: WALL_Z - 0.03 }),
   );
-  // the view: the owner's own trees, unlit so it reads as bright daylight
-  const view = new THREE.TextureLoader().load('/room/window-view.jpg');
-  view.colorSpace = THREE.SRGBColorSpace;
-  const viewMat = new THREE.MeshBasicMaterial({ map: view, toneMapped: false });
-  scene.add(mesh(new THREE.PlaneGeometry(w * 1.25, h * 1.25), viewMat, { x: cx, y: cy, z: WALL_Z - 0.45, cast: false, receive: false }));
+  // The view: the owner's own trees, a day and an evening version of the same photo, as a
+  // single picture well behind the glass (so it shifts a little as the camera moves, like a
+  // real view). Unlit, so it reads as daylight; cover-fitted, keeping the bottom of the photo.
+  const H2 = h * 1.25, W2 = w * 1.25;
+  const loader = new THREE.TextureLoader();
+  // which part of each photo: z = zoom (1 = as much of the photo as fits), x / y = where the
+  // crop sits in the leftover room (0 = left / top, 1 = right / bottom)
+  // both are the same photo (the evening one is the day photo graded to dusk), so both show
+  // the same part: the bottom left, with the neighbour's roof
+  const VIEW = { z: 1.6, x: 0, y: 1 };
+  const CROP = { light: VIEW, dark: VIEW };
+  const shot = (src, { z, x, y }) => {
+    const t = loader.load(src, () => {
+      const imgAsp = t.image.width / t.image.height, planeAsp = W2 / H2;
+      // the largest plane-shaped part of the photo, in UV units, then zoomed in
+      const rw = (imgAsp > planeAsp ? planeAsp / imgAsp : 1) / z;
+      const rh = (imgAsp > planeAsp ? 1 : imgAsp / planeAsp) / z;
+      t.repeat.set(rw, rh);
+      t.offset.set((1 - rw) * x, (1 - rh) * (1 - y)); // UV y runs up from the bottom
+    });
+    t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  };
+  const views = { light: shot('/room/window-light.jpg', CROP.light), dark: shot('/room/window-dark.jpg', CROP.dark) };
+  const viewMat = new THREE.MeshBasicMaterial({ map: views.light, toneMapped: false });
+  scene.add(note(mesh(new THREE.PlaneGeometry(W2, H2), viewMat, { x: cx, y: cy, z: WALL_Z - 0.45, cast: false, receive: false }), 'outside'));
+  const setView = (theme) => {
+    viewMat.map = views[theme === 'dark' ? 'dark' : 'light'];
+  };
 
   bookcase(scene);
   cubeShelf(scene);
-  return { wallMat, floorMat, viewMat };
+  return { wallMat, floorMat, setView };
 }
 
 // Tall light-oak bookcase, two columns, in the right corner.
@@ -144,12 +219,32 @@ function notebook() {
   pen.rotation.y = 0.06;
   pen.add(mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.14, 16), mat('#1d252d', { metalness: 0.3, roughness: 0.4 }), { rx: Math.PI / 2 }));
   root.add(pen);
-  return { root: tag(root, 'coursework'), hinge, anchor: new THREE.Vector3(0, 0.03, -0.06) };
+  // the loose top page, the one that is taken out (Coursework) and put back
+  const c = document.createElement('canvas');
+  c.width = 388; c.height = 528;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fbfaf6';
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.fillStyle = 'rgba(0, 76, 151, 0.28)';
+  for (let y = 40; y < c.height; y += 22) ctx.fillRect(0, y, c.width, 1.5);
+  ctx.fillStyle = 'rgba(200, 60, 60, 0.4)';
+  ctx.fillRect(46, 0, 1.5, c.height);
+  const pageTex = new THREE.CanvasTexture(c);
+  pageTex.colorSpace = THREE.SRGBColorSpace;
+  const white = mat('#fbfaf6');
+  const sheet = mesh(
+    new THREE.BoxGeometry(w - 0.012, 0.0004, d - 0.01),
+    [white, white, new THREE.MeshStandardMaterial({ map: pageTex, roughness: 0.9 }), white, white, white],
+    { x: 0.002, y: 0.0134 },
+  );
+  root.add(sheet);
+  const paper = { mesh: sheet, w: w - 0.012, h: d - 0.01, top: 0.0002, slide: { y: 0.035, z: 0.045, rx: 0.35 } };
+  return { root: tag(root, 'coursework'), hinge, paper, anchor: new THREE.Vector3(0, 0.03, -0.06) };
 }
 
 function printout() {
   const root = new THREE.Group();
-  root.position.set(-0.33, TOP, 0.1);
+  root.position.set(-0.33, TOP + 0.003, 0.1); // resting on the desk mat (3 mm thick), not under it
   root.rotation.y = -0.07;
   const c = document.createElement('canvas');
   c.width = 420; c.height = 594;
@@ -163,12 +258,27 @@ function printout() {
   for (let i = 0; i < 22; i++) ctx.fillRect(36, 110 + i * 20, i % 5 === 0 ? 150 : 250 + ((i * 37) % 90), 6);
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
+  let sheet;
   for (let i = 0; i < 3; i++) {
     const m = i === 2 ? [mat('#fff'), mat('#fff'), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.9 }), mat('#fff'), mat('#fff'), mat('#fff')] : mat('#fdfdfb');
-    root.add(mesh(new THREE.BoxGeometry(0.21, 0.0012, 0.297), m, { y: 0.0006 + i * 0.0013, x: (i - 1) * 0.002, ry: (i - 1) * 0.012 }));
+    sheet = mesh(new THREE.BoxGeometry(0.21, 0.0012, 0.297), m, { y: 0.0006 + i * 0.0013, x: (i - 1) * 0.002, ry: (i - 1) * 0.012 });
+    root.add(sheet);
   }
-  root.add(mesh(new THREE.BoxGeometry(0.012, 0.0015, 0.002), mat('#9aa0a6', { metalness: 0.8, roughness: 0.3 }), { x: -0.085, y: 0.0045, z: -0.13, ry: 0.6 }));
-  return { root: tag(root, 'resume'), anchor: new THREE.Vector3(0, 0.02, -0.08) };
+  // binder clip holding the stack at the top edge; the top sheet is drawn out from under it
+  const clip = new THREE.Group();
+  clip.position.set(0, 0.0058, -0.1415);
+  const black = mat('#16191c', { roughness: 0.35, metalness: 0.2 });
+  const steel = mat('#b9bec4', { metalness: 0.9, roughness: 0.25 });
+  clip.add(mesh(new THREE.BoxGeometry(0.05, 0.0034, 0.017), black, { z: 0.0015 }));
+  clip.add(mesh(new THREE.BoxGeometry(0.05, 0.0075, 0.003), black, { y: -0.002, z: -0.0075 }));
+  const handle = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.0009, 6, 20, Math.PI), steel);
+  handle.position.set(0, 0.0018, 0.009);
+  handle.rotation.x = Math.PI / 2 - 0.2; // folded down toward the reader, slightly raised
+  handle.castShadow = true;
+  clip.add(handle);
+  root.add(clip);
+  const paper = { mesh: sheet, w: 0.21, h: 0.297, top: 0.0006, slide: { y: 0.004, z: 0.12, rx: 0 } };
+  return { root: tag(root, 'resume'), paper, anchor: new THREE.Vector3(0, 0.02, -0.08) };
 }
 
 function macbook(theme) {
@@ -243,7 +353,12 @@ function iphone(contact) {
   // black glass front, then the screen inset with rounded corners
   const glass = mesh(flatRounded(W - 0.0016, H - 0.0016, R - 0.0008), new THREE.MeshStandardMaterial({ color: '#050607', roughness: 0.12, metalness: 0.2 }), { y: 0.00835, cast: false });
   const off = phoneScreen(false, contact);
-  const on = phoneScreen(true, contact);
+  const on = { light: phoneScreen(true, contact, 'light'), dark: phoneScreen(true, contact, 'dark') };
+  let lit = false, theme = 'light';
+  const show = () => {
+    screen.material.map = lit ? on[theme] : off;
+    screen.material.needsUpdate = true;
+  };
   const screen = mesh(flatRounded(W - 0.0062, H - 0.0062, R - 0.003), new THREE.MeshBasicMaterial({ map: off, toneMapped: false }), { y: 0.00845, cast: false });
   glass.userData.noHull = screen.userData.noHull = true;
   root.add(glass, screen);
@@ -251,28 +366,102 @@ function iphone(contact) {
     root: tag(root, 'contact'),
     anchor: new THREE.Vector3(0, 0.02, -0.04),
     setOn(v) {
-      screen.material.map = v ? on : off;
-      screen.material.needsUpdate = true;
+      lit = v;
+      show();
+    },
+    setTheme(t) {
+      theme = t;
+      show();
     },
   };
 }
 
-// Desk lamp: the earlier cone-shade design, now in orange (the owner's lamp colour).
+// Desk lamp: the cone-shade design in orange (the owner's lamp colour). A weighted, turned
+// base with a push switch; two arms with knuckle joints and screw heads; a double-walled
+// shade (orange outside, cream inside) with a rolled rim and a bulb socket; and a cord that
+// runs to the back of the desk through an inline switch, then drops behind it.
 function lamp() {
   const root = new THREE.Group();
   root.position.set(0.72, TOP, -0.22);
   root.rotation.y = -0.5;
-  const orange = mat('#e4602a', { roughness: 0.42, metalness: 0.1 });
-  root.add(mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.012, 32), orange, { y: 0.006 }));
-  const a1 = mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.36, 12), orange, { y: 0.18, z: 0.02, rx: 0.12 });
-  const a2 = mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.3, 12), orange, { y: 0.39, z: 0.13, rx: 1.15 });
+  const orange = new THREE.MeshPhysicalMaterial({ color: '#e4602a', roughness: 0.42, clearcoat: 0.4, clearcoatRoughness: 0.3 });
+  const steel = mat('#c9ccd0', { metalness: 0.9, roughness: 0.28 });
+  const dark = mat('#2a2b2e', { metalness: 0.5, roughness: 0.4 });
+
+  // base: a turned disc with a chamfered edge, a felt pad under it
+  const prof = [[0, 0], [0.064, 0], [0.0655, 0.0025], [0.0645, 0.0095], [0.06, 0.0135], [0.016, 0.015], [0, 0.015]].map(([x, y]) => new THREE.Vector2(x, y));
+  root.add(mesh(new THREE.LatheGeometry(prof, 64), orange, { y: 0.0006 }));
+  root.add(fine(mesh(new THREE.CylinderGeometry(0.061, 0.061, 0.0008, 48), mat('#3b3530', { roughness: 1 }), { y: 0.0003, cast: false })));
+  // push switch near the front of the base
+  root.add(fine(mesh(new THREE.CylinderGeometry(0.0075, 0.008, 0.003, 28), steel, { y: 0.0165, z: 0.038 })));
+  root.add(fine(mesh(new THREE.CylinderGeometry(0.0055, 0.0055, 0.0035, 28), mat('#f1ede4', { roughness: 0.4 }), { y: 0.0185, z: 0.038 })));
+
+  // arms between explicit joints
+  const B = new THREE.Vector3(0, 0.026, -0.008), E = new THREE.Vector3(0, 0.34, 0.045);
   const head = new THREE.Group();
   head.position.set(0, 0.44, 0.26);
-  head.rotation.x = 0.55;
-  head.add(mesh(new THREE.ConeGeometry(0.06, 0.1, 32, 1, true), mat('#e4602a', { roughness: 0.42, side: THREE.DoubleSide })));
+  head.rotation.x = -0.55; // opening toward the desk, the same way the light falls
+  const apex = new THREE.Vector3(0, 0.062, 0).applyEuler(head.rotation).add(head.position);
+  const up = new THREE.Vector3(0, 1, 0);
+  const rod = (a, b2, r) => {
+    const d = new THREE.Vector3().subVectors(b2, a);
+    const m = mesh(new THREE.CylinderGeometry(r, r, d.length(), 16), orange);
+    m.position.copy(a).addScaledVector(d, 0.5);
+    m.quaternion.setFromUnitVectors(up, d.normalize());
+    return m;
+  };
+  root.add(rod(B, E, 0.0052), rod(E, apex, 0.0048));
+  // collar where the arm meets the base
+  root.add(mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.012, 28), orange, { y: 0.02, z: -0.008 }));
+  // knuckles (hinge across x) with screw heads at both ends
+  const knuckle = (at, r, len) => {
+    const k = new THREE.Group();
+    k.position.copy(at);
+    k.add(mesh(new THREE.CylinderGeometry(r, r, len, 20), orange, { rz: Math.PI / 2 }));
+    for (const sx of [1, -1]) {
+      k.add(fine(mesh(new THREE.CylinderGeometry(r * 0.62, r * 0.62, 0.0016, 16), steel, { x: sx * (len / 2 + 0.0008), rz: Math.PI / 2 })));
+      k.add(fine(mesh(new THREE.BoxGeometry(0.0004, r * 0.9, 0.0007), dark, { x: sx * (len / 2 + 0.0017) })));
+    }
+    return k;
+  };
+  root.add(knuckle(B, 0.0075, 0.018), knuckle(E, 0.0072, 0.017), knuckle(apex, 0.0066, 0.016));
+
+  // shade: outer orange, inner cream, rolled rim, cap at the top, socket and bulb inside
+  head.add(mesh(new THREE.ConeGeometry(0.06, 0.1, 48, 1, true), orange));
+  const inner = new THREE.ConeGeometry(0.0582, 0.097, 48, 1, true);
+  inner.translate(0, 0.0015, 0);
+  head.add(fine(mesh(inner, mat('#f3ede2', { roughness: 0.6, side: THREE.BackSide }), { cast: false })));
+  head.add(fine(mesh(new THREE.TorusGeometry(0.0592, 0.0014, 10, 64), orange, { y: -0.0496, rx: Math.PI / 2 })));
+  head.add(mesh(new THREE.CylinderGeometry(0.009, 0.012, 0.014, 24), orange, { y: 0.054 }));
+  head.add(fine(mesh(new THREE.CylinderGeometry(0.0115, 0.0105, 0.026, 24), mat('#efe9df', { roughness: 0.5 }), { y: 0.012, cast: false })));
+  head.add(fine(mesh(new THREE.TorusGeometry(0.0112, 0.0009, 6, 24), steel, { y: -0.001, rx: Math.PI / 2, cast: false })));
   const bulbMat = new THREE.MeshStandardMaterial({ color: '#fff4dc', emissive: '#ffd9a0', emissiveIntensity: 0 });
-  head.add(mesh(new THREE.SphereGeometry(0.022, 16, 12), bulbMat, { y: -0.03, cast: false }));
-  root.add(a1, a2, head);
+  head.add(fine(mesh(new THREE.SphereGeometry(0.022, 24, 16), bulbMat, { y: -0.03, cast: false })));
+  root.add(head);
+
+  // cord: out of the back of the base, across the desk through an inline switch, over the edge
+  root.updateMatrixWorld(true);
+  const local = (x, y, z) => root.worldToLocal(new THREE.Vector3(x, y, z));
+  const cordPts = [
+    new THREE.Vector3(0, 0.004, -0.064),
+    new THREE.Vector3(0, 0.0025, -0.085),
+    local(0.758, TOP + 0.0025, -0.31),
+    local(0.752, TOP + 0.0025, -0.35),
+    local(0.748, TOP + 0.001, -0.373),
+    local(0.746, TOP - 0.012, -0.384),
+    local(0.744, TOP - 0.06, -0.39),
+    local(0.742, TOP - 0.4, -0.392),
+  ];
+  const curve = new THREE.CatmullRomCurve3(cordPts, false, 'centripetal');
+  const cordMat = mat('#efebe4', { roughness: 0.7 });
+  root.add(fine(mesh(new THREE.TubeGeometry(curve, 120, 0.0022, 8), cordMat)));
+  const swAt = curve.getPointAt(0.3), swDir = curve.getTangentAt(0.3);
+  const sw = mesh(new RoundedBoxGeometry(0.014, 0.008, 0.032, 2, 0.003), cordMat);
+  sw.position.copy(swAt).add(new THREE.Vector3(0, 0.0015, 0));
+  sw.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(swDir.x, 0, swDir.z).normalize());
+  sw.add(mesh(new THREE.BoxGeometry(0.007, 0.002, 0.009), mat('#d8d2c7', { roughness: 0.5 }), { y: 0.0045 }));
+  root.add(fine(sw));
+
   const light = new THREE.SpotLight('#ffd9a8', 0, 3.2, 0.75, 0.6, 1.6);
   light.position.set(0, 0.42, 0.27);
   light.castShadow = true;
@@ -332,27 +521,32 @@ function photos(items) {
 
   const sphere = new THREE.Group();
   sphere.position.set(0.28, 1.2, -0.04); // in front of the wall, clear of the lamp
-  const R = 0.15;
-  const pts = frames.map((_, i) => {
-    const y = 1 - (i / Math.max(1, frames.length - 1)) * 2;
-    const rad = Math.sqrt(1 - y * y);
-    const th = Math.PI * (3 - Math.sqrt(5)) * i;
-    return new THREE.Vector3(Math.cos(th) * rad, y * 0.92, Math.sin(th) * rad).multiplyScalar(R);
-  });
+  // scattered at random angles and sizes, never overlapping (see sphereLayout.js); the prints
+  // are a quarter bigger on the sphere than on the wall, so it reads dense like a ball of photos
+  const BIG = 1.25;
+  const { poses } = sphereLayout(n, (cell * 0.82 + 0.012) * BIG, (cell * 0.82 * 1.25 + 0.012) * BIG);
 
   let open = false;
-  let spin = 0.15;
-  const tmp = new THREE.Object3D();
+  let settled = false; // every print has arrived on the sphere (hover is off until then)
+  let moveId = 0;
+  let spin = 0.15, tilt = 0; // yaw / pitch speed (rad/s); yaw settles back to a slow idle spin
+  const qa = new THREE.Quaternion();
+  const AX = new THREE.Vector3(1, 0, 0), AY = new THREE.Vector3(0, 1, 0);
 
-  function tween(frame, toP, toQ, delay) {
+  function tween(frame, toP, toQ, toS, delay, onComplete) {
+    frame.userData.tw?.kill(); // a move the other way that hasn't finished
+    gsap.killTweensOf(frame.scale); // a hover pop
+    frame.userData.size = toS; // its resting size, for the hover pop to grow from
     const fromP = frame.position.clone();
     const fromQ = frame.quaternion.clone();
+    const fromS = frame.scale.x;
     const o = { t: 0 };
-    gsap.to(o, {
-      t: 1, duration: 1.4, delay, ease: 'expo.inOut',
+    frame.userData.tw = gsap.to(o, {
+      t: 1, duration: 1.4, delay, ease: 'expo.inOut', onComplete,
       onUpdate() {
         frame.position.lerpVectors(fromP, toP, o.t);
         frame.quaternion.slerpQuaternions(fromQ, toQ, o.t);
+        frame.scale.setScalar(fromS + (toS - fromS) * o.t);
       },
     });
   }
@@ -364,27 +558,40 @@ function photos(items) {
     toSphere() {
       if (open) return;
       open = true;
+      settled = false;
+      const my = ++moveId;
       sphere.rotation.set(0, 0, 0);
       frames.forEach((f, i) => {
         sphere.attach(f);
-        tmp.position.copy(pts[i]);
-        tmp.lookAt(pts[i].clone().multiplyScalar(2));
-        tween(f, pts[i].clone(), tmp.quaternion.clone(), i * 0.03);
+        const last = i === frames.length - 1; // it starts last, so it lands last
+        tween(f, poses[i].p, poses[i].q, poses[i].s * BIG, i * 0.03, last ? () => (settled = my === moveId) : undefined);
       });
     },
     toWall() {
       if (!open) return;
       open = false;
+      settled = false;
+      ++moveId;
       frames.forEach((f, i) => {
         wall.attach(f);
-        tween(f, f.userData.wall.p, f.userData.wall.q, i * 0.02);
+        tween(f, f.userData.wall.p, f.userData.wall.q, 1, i * 0.02);
       });
     },
-    drag(dx) { spin += dx * 0.004; },
+    get settled() {
+      return settled;
+    },
+    // drag sideways spins it, drag (or scroll) up and down tumbles it over
+    drag(dx, dy = 0) {
+      spin += dx * 0.004;
+      tilt += dy * 0.004;
+    },
     update(dt) {
       if (!open) return;
       spin += (0.15 - spin) * Math.min(1, dt * 1.5);
-      sphere.rotation.y += spin * dt;
+      tilt -= tilt * Math.min(1, dt * 1.5);
+      // about the world axes, so "up" is always up on screen however it has turned
+      sphere.quaternion.premultiply(qa.setFromAxisAngle(AY, spin * dt));
+      sphere.quaternion.premultiply(qa.setFromAxisAngle(AX, tilt * dt));
     },
   };
 }
@@ -435,45 +642,12 @@ function speedCube() {
   return g;
 }
 
-// The little white duckling figure: smooth rounded body, raised head, flat bill tipped up,
-// folded wings, a small upturned tail, thin legs on little webbed feet.
-function duckling() {
-  const g = new THREE.Group();
-  const white = mat('#f6f4ef', { roughness: 0.9 });
-  const bill = mat('#efe6cf', { roughness: 0.6 });
-  const legs = mat('#cfae6d', { roughness: 0.7 });
-  const blob = (r, sx, sy, sz, x, y, z, m = white, rx = 0) => {
-    const b = mesh(new THREE.SphereGeometry(r, 28, 20), m, { x, y, z, rx });
-    b.scale.set(sx, sy, sz);
-    return b;
-  };
-  g.add(
-    blob(0.018, 1, 0.82, 1.3, 0, 0.024, 0),            // body
-    blob(0.014, 1, 0.9, 1, 0, 0.029, 0.011),           // full chest
-    blob(0.0095, 0.85, 1.3, 0.85, 0, 0.04, 0.013),     // neck
-    blob(0.0118, 1, 1, 1.05, 0, 0.052, 0.016),         // head
-    blob(0.008, 0.6, 0.28, 1.05, 0, 0.056, 0.028, bill, -0.55), // bill, tipped up
-    blob(0.012, 0.28, 0.6, 1.0, 0.0155, 0.027, -0.003, white, 0.2),  // wings
-    blob(0.012, 0.28, 0.6, 1.0, -0.0155, 0.027, -0.003, white, 0.2),
-  );
-  g.add(mesh(new THREE.ConeGeometry(0.006, 0.014, 14), white, { y: 0.03, z: -0.026, rx: -1.15 })); // tail
-  const eye = mat('#1b1b1d', { roughness: 0.25 });
-  g.add(mesh(new THREE.SphereGeometry(0.0014, 8, 6), eye, { x: 0.0101, y: 0.055, z: 0.021 }));
-  g.add(mesh(new THREE.SphereGeometry(0.0014, 8, 6), eye, { x: -0.0101, y: 0.055, z: 0.021 }));
-  for (const x of [0.0065, -0.0065]) {
-    g.add(mesh(new THREE.CylinderGeometry(0.0011, 0.0011, 0.012, 6), legs, { x, y: 0.006, z: 0.002 }));
-    const foot = blob(0.0045, 1, 0.22, 1.3, x, 0.0008, 0.005, legs);
-    g.add(foot);
-  }
-  return g;
-}
-
 function decor(scene) {
   // Things from the real room. No id → never hover or click.
   const add = (...m) => scene.add(...m);
   // desk mat
   add(mesh(new RoundedBoxGeometry(0.62, 0.003, 0.32, 2, 0.0015), mat('#2a2d31', { roughness: 0.95 }), { x: 0.06, y: TOP + 0.0015, z: -0.02, cast: false }));
-  add(computerMouse());
+  add(note(computerMouse(), 'mouse'));
   // window sill: the speed cube with the little white duckling standing on it
   const sill = new THREE.Group();
   sill.position.set(-0.2, WIN.y0 + 0.001, WALL_Z + 0.03);
@@ -482,23 +656,8 @@ function decor(scene) {
   const duck = duckling();
   duck.position.set(-0.1, 0, 0.05); // beside the cube with some space; z keeps it on the sill (the group is turned)
   duck.rotation.y = -1.0; // in profile, facing left: bill, chest and tail read as a duck
-  sill.add(cube, duck);
+  sill.add(note(cube, 'cube'), note(duck, 'duck'));
   add(sill);
-
-  // white chair with wooden legs, pulled out and turned aside
-  const chair = new THREE.Group();
-  chair.position.set(1.0, 0, 0.3);
-  chair.rotation.y = -1.05;
-  const shell = mat('#f2f1ed', { roughness: 0.45 });
-  const legWood = mat('#b7895a', { roughness: 0.6 });
-  chair.add(mesh(new RoundedBoxGeometry(0.44, 0.03, 0.42, 3, 0.012), shell, { y: 0.45 }));
-  chair.add(mesh(new RoundedBoxGeometry(0.44, 0.32, 0.03, 3, 0.012), shell, { y: 0.66, z: -0.2, rx: -0.18 }));
-  for (const [x, z] of [[-0.17, -0.16], [0.17, -0.16], [-0.17, 0.16], [0.17, 0.16]]) {
-    const leg = mesh(new THREE.CylinderGeometry(0.012, 0.009, 0.46, 10), legWood, { x: x * 1.12, y: 0.22, z: z * 1.12 });
-    leg.rotation.set(z * 0.5, 0, -x * 0.5);
-    chair.add(leg);
-  }
-  add(chair);
 }
 
 // Hover outline: an "inverted hull" behind every mesh of a nav object: a copy grown by a
@@ -538,7 +697,7 @@ export function setHullColor(c) {
 
 export function buildDesk({ theme, content }) {
   const scene = new THREE.Scene();
-  const { wallMat, floorMat, viewMat } = room(scene);
+  const { wallMat, floorMat, setView } = room(scene);
   desk(scene);
   decor(scene);
 
@@ -574,6 +733,7 @@ export function buildDesk({ theme, content }) {
     gsap.to(sun, { intensity: dark ? 0.12 : 2.2, duration: d });
     gsap.to(objects.lamp.light, { intensity: dark ? 7 : 0, duration: d });
     gsap.to(objects.lamp.bulbMat, { emissiveIntensity: dark ? 3 : 0, duration: d });
+    objects.contact.setTheme(t);
     if (!objects.works.screen.userData.live) {
       objects.works.screen.material.map = laptopScreen(t);
       objects.works.screen.material.needsUpdate = true;
@@ -582,7 +742,7 @@ export function buildDesk({ theme, content }) {
     scene.background = bg;
     wallMat.color.set(dark ? '#c9c1b3' : '#ece5d8');
     floorMat.color.set(dark ? '#b8ae9e' : '#cbc2b3');
-    viewMat.color.set(dark ? '#1f2c40' : '#ffffff'); // trees at night
+    setView(t); // the evening photo after dark
   }
   setTheme(theme, false);
 

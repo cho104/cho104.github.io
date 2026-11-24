@@ -1,28 +1,34 @@
-// Opening: the name is written out stroke by stroke in the handwriting font, then the desk
-// fades up beneath it.
-import { gsap } from 'gsap';
+// Opening: the name in the handwriting font is uncovered left to right, then the desk
+// fades up beneath it. Both steps are CSS transform/opacity animations, which run on the
+// compositor, so they stay smooth while the main thread is busy building the 3D world.
+//
+// Returns { started, done }: `started` resolves once the wipe is running (build the heavy
+// world after it, or the wipe waits for the build before it can begin); `done` resolves
+// with a function that fades the intro away.
+const frame = () => new Promise((r) => requestAnimationFrame(r));
 
-export async function playIntro(name) {
+export function playIntro(name) {
   const intro = document.getElementById('intro');
-  const text = intro.querySelector('text');
-  text.textContent = name;
-  try {
-    await document.fonts.load('170px "Reenie Beanie"', name);
-  } catch {}
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    intro.remove();
-    return;
-  }
-  const tl = gsap.timeline();
-  tl.to(text, { strokeDashoffset: 0, duration: 2.2, ease: 'power1.inOut' })
-    .to(text, { fill: getComputedStyle(document.body).color, duration: 0.5 }, '-=0.5')
-    .to(text, { strokeWidth: 0, duration: 0.3 }, '<');
-  await tl;
-  return () =>
-    gsap.to(intro, {
-      opacity: 0,
-      duration: 0.9,
-      ease: 'power2.inOut',
-      onComplete: () => intro.remove(),
-    });
+  intro.querySelector('.intro-name span').textContent = name;
+  let wipe;
+  const started = (async () => {
+    try {
+      await document.fonts.load('170px "Reenie Beanie"', name);
+    } catch {}
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) return intro.remove();
+    intro.classList.add('go');
+    wipe = intro.querySelector('.intro-wipe').getAnimations()[0];
+    await wipe?.ready;
+    await frame(); // committed to the compositor
+  })();
+  const done = started.then(async () => {
+    if (!wipe) return;
+    await wipe.finished.catch(() => {});
+    return () => {
+      intro.classList.add('out');
+      intro.addEventListener('transitionend', () => intro.remove(), { once: true });
+      setTimeout(() => intro.remove(), 1200); // in case transitionend never fires
+    };
+  });
+  return { started, done };
 }

@@ -54,7 +54,23 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 82%, transparent), transparent);
 }
 body.is-readme .nav::before { display: none; }
-.nav-home { font-weight: 600; text-decoration: none; margin-right: auto; }
+.nav::before { transition: opacity 0.6s var(--ease); }
+/* over the wallpaper: instead of the paper fade, the sky darkens a little overhead */
+body[data-wall] .nav::before { height: 150px; background: linear-gradient(to bottom, rgb(4 28 72 / 0.38), transparent); }
+/* Works ring: white text on the sky-and-hill wallpaper (the project card keeps its own colors) */
+body[data-wall] :is(.nav, .page-title, .hint, .works-toggle, .works-caption, .back) {
+  --ink: #ffffff; --muted: rgb(255 255 255 / 0.8); --accent: #ffffff;
+  color: var(--ink);
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.22), 0 0 22px rgb(0 0 0 / 0.16);
+}
+body[data-wall] .works-caption a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.nav-home {
+  font-weight: 600; text-decoration: none; margin-right: auto;
+  font-size: clamp(22px, 1.9vw, 32px); letter-spacing: -0.025em; line-height: 1;
+  transition: opacity 0.5s var(--ease);
+}
+/* away from the desk the page title takes the corner; the name steps aside */
+body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events: none; }
 .nav-links { display: flex; gap: 0.35em; }
 .nav-links a, .nav-theme {
   text-decoration: none; color: var(--muted);
@@ -122,7 +138,16 @@ body.is-readme .nav::before { display: none; }
 .works-caption a { text-decoration: none; font-weight: 600; }
 .works-caption a:hover { color: var(--accent); }
 .works-caption .num, .works-caption .org { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
-.works-back { position: fixed; right: var(--pad); bottom: calc(var(--pad) - 6px); }
+/* "back to the desk", on every page but the desk */
+.back { position: fixed; z-index: 18; right: var(--pad); bottom: calc(var(--pad) - 6px); }
+
+/* Loose paper (coursework page, resume, contact card): always real paper with dark ink,
+   whatever the theme or whatever is behind it on the desk. */
+.paper-sheet {
+  --ink: #1d252d; --muted: #5f676e; --accent: #004c97; --line: #d6d8d9; --paper: #fbfaf6;
+  color: var(--ink);
+}
+[data-theme='dark'] .paper-sheet { --paper: #e8e5dd; --line: #cbc8c0; }
 
 /* Works: Index (Jesper's Full view) */
 .index {
@@ -130,15 +155,22 @@ body.is-readme .nav::before { display: none; }
   padding: calc(var(--pad) * 2.4 + clamp(64px, 11vw, 190px)) 12vw 10vh;
   background: var(--bg);
 }
+/* Works: Index on the wallpaper: the page itself is see-through, the titles go white */
+body[data-wall] .index {
+  background: none;
+  --ink: #ffffff; --muted: rgb(255 255 255 / 0.7);
+  color: var(--ink);
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.3); /* small: hundreds of letters move under the lens */
+}
 .index p {
   margin: 0; max-width: 1100px; text-align: center;
   font-size: clamp(18px, 1.75vw, 30px); line-height: 1.5; letter-spacing: -0.01em;
 }
 .index a { white-space: nowrap; text-decoration: none; transition: color 0.3s var(--ease), opacity 0.3s; position: relative; z-index: 2; }
 .index .dot { color: var(--muted); margin: 0 0.1em; }
+.index .ch { display: inline-block; transform-origin: 50% 60%; }
 .index.is-hovering a { color: var(--muted); }
-.index.is-hovering a.near { font-style: italic; }
-.index.is-hovering a.on { color: var(--ink); font-style: normal; }
+.index.is-hovering a.on { color: var(--ink); }
 .preview {
   position: fixed; z-index: 1; left: 0; top: 0; width: 300px; aspect-ratio: 16 / 10;
   border-radius: 14px; overflow: hidden; pointer-events: none;
@@ -166,6 +198,17 @@ body.is-readme .nav::before { display: none; }
 .chip { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 7px 12px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 7%, transparent); }
 .card-media { display: grid; gap: 4vh; }
 .card-media img, .card-media video { width: 100%; display: block; border-radius: 6px; }
+.card-links { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 1.2rem; font-size: 14px; }
+.card-links a, .resume-links a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
+.card-links a::after, .resume-links a::after { content: ' ↗'; }
+.card-links a:hover, .resume-links a:hover { border-bottom-color: var(--accent); }
+/* attached documents: a first-page preview with its name under it */
+.doc { display: block; text-decoration: none; color: inherit; }
+.doc img { border: 1px solid var(--line); transition: transform 0.4s var(--ease); }
+.doc:hover img { transform: translateY(-4px); }
+.doc-blank { display: grid; place-items: center; aspect-ratio: 16 / 9; border-radius: 6px; background: color-mix(in srgb, var(--ink) 6%, transparent); font-size: 13px; letter-spacing: 0.2em; color: var(--muted); }
+.doc-label { display: block; margin-top: 0.6rem; font-size: 14px; font-weight: 600; }
+.doc-label i { font-style: normal; font-weight: 400; color: var(--muted); margin-left: 0.4em; }
 .card-empty {
   aspect-ratio: 16 / 10; border: 1px dashed var(--line); border-radius: 6px;
   display: grid; place-items: center; text-align: center; color: var(--muted); padding: 2rem;
@@ -181,6 +224,7 @@ body.is-readme .nav::before { display: none; }
 /* About: bio beside the sphere */
 .about {
   position: fixed; left: var(--pad); bottom: calc(var(--pad) * 2.5); max-width: min(440px, 36vw);
+  max-height: calc(100vh - var(--pad) * 2.5 - 190px); overflow-y: auto; overscroll-behavior: contain;
   padding: 22px 26px; border-radius: 6px;
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
@@ -189,18 +233,19 @@ body.is-readme .nav::before { display: none; }
 .about p { margin: 0 0 1em; }
 .about .todo { color: var(--muted); font-style: italic; }
 
-/* Coursework: notebook page */
+/* Coursework: a page out of the notebook (flown in and out by ui/paper.js) */
 .notebook {
-  position: fixed; right: 6vw; top: 12vh;
-  width: min(620px, 52vw); max-height: 78vh; overflow-y: auto;
-  visibility: hidden; /* shown when it comes out of the notebook */
+  position: fixed; z-index: 17; right: 6vw; top: 9vh;
+  width: min(620px, 50vw); max-height: 80vh; overflow-y: auto; overscroll-behavior: contain;
+  visibility: hidden;
   background:
     repeating-linear-gradient(to bottom, transparent 0 33px, color-mix(in srgb, var(--accent) 22%, transparent) 33px 34px),
     var(--paper);
   background-attachment: local;
-  border-radius: 4px; padding: 34px 40px 40px 72px;
-  box-shadow: 0 30px 80px rgb(0 0 0 / 0.18);
+  border-radius: 3px; padding: 34px 40px 40px 72px;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.22);
   font: 400 30px/34px var(--font-hand);
+  backface-visibility: hidden;
 }
 .notebook::before {
   content: ''; position: absolute; left: 52px; top: 0; bottom: 0; width: 1px; background: rgb(200 60 60 / 0.35);
@@ -211,29 +256,41 @@ body.is-readme .nav::before { display: none; }
 .notebook .now { color: var(--accent); }
 .notebook .now::after { content: ' ← now'; font-size: 24px; }
 
-/* Resume page */
+/* Resume: the clipped sheet, drawn out from under the binder clip */
 .resume {
-  position: fixed; inset: 0; overflow-y: auto; background: var(--bg);
-  padding: calc(var(--pad) * 2.4 + clamp(64px, 11vw, 190px) + 4vh) var(--pad) 12vh;
+  position: fixed; z-index: 17; right: 6vw; top: 9vh;
+  width: min(780px, 58vw); height: 80vh; overflow-y: auto; overscroll-behavior: contain;
+  visibility: hidden;
+  background: var(--paper); border-radius: 2px;
+  padding: 44px 48px 56px;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.22);
+  font-size: 14px;
+  backface-visibility: hidden;
 }
-.resume-grid { display: grid; grid-template-columns: 1fr 3fr; gap: 1.5rem 4vw; max-width: 1200px; }
+.resume-head { margin-bottom: 2rem; }
+.resume-head h2 { margin: 0; font-size: 34px; letter-spacing: -0.035em; font-weight: 700; line-height: 1; }
+.resume-head p { margin: 0.4rem 0 0; color: var(--muted); }
+.resume-grid { display: grid; grid-template-columns: 1fr 3.4fr; gap: 1.2rem 2.4rem; }
 .resume h3 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0.3rem 0 0; font-weight: 500; }
-.resume ol { list-style: none; margin: 0 0 2.5rem; padding: 0; }
-.resume li { padding: 0.9rem 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 2rem; }
+.resume ol { list-style: none; margin: 0 0 2rem; padding: 0; }
+.resume li { padding: 0.8rem 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 1.4rem; }
 .resume li strong { font-weight: 600; }
 .resume li .org, .resume li .yr { color: var(--muted); }
 .resume li p { grid-column: 1 / -1; margin: 0.2rem 0 0; max-width: 70ch; color: var(--muted); }
-.resume-pdf { margin-bottom: 3rem; }
-.resume-photos { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 0.7rem; }
-.resume-photos img { height: 92px; width: auto; border-radius: 4px; display: block; transition: transform 0.3s var(--ease); }
+.resume-pdf { margin-bottom: 2rem; }
+.resume-links { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 12px; margin-top: 0.3rem; font-size: 0.9em; }
+.resume-photos { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 0.7rem; }
+.resume-photos img { height: 84px; width: auto; border-radius: 3px; display: block; transition: transform 0.3s var(--ease); }
 .resume-photos a:hover img { transform: scale(1.04); }
 
-/* Contact: iPhone screen card */
+/* Contact: a note card beside the phone */
 .contact {
-  position: fixed; right: 8vw; top: 50%; transform: translateY(-50%);
-  display: grid; gap: 1.2rem;
+  position: fixed; right: 7vw; top: 50%; transform: translateY(-50%) rotate(-1.5deg);
+  display: grid; gap: 0.9rem; padding: 26px 36px 34px;
+  background: var(--paper); border-radius: 3px; box-shadow: 0 24px 60px rgb(0 0 0 / 0.2);
 }
-.contact .big { font-size: clamp(26px, 2.6vw, 44px); letter-spacing: -0.02em; text-decoration: none; font-weight: 600; justify-self: start; text-align: left; }
+.contact h2 { margin: 0 0 0.2rem; font: 400 58px/0.9 var(--font-hand); color: var(--ink); }
+.contact .big { font-size: clamp(24px, 2.3vw, 40px); letter-spacing: -0.02em; text-decoration: none; font-weight: 600; justify-self: start; text-align: left; color: var(--ink); }
 .contact .big:hover { color: var(--accent); }
 .contact .email { cursor: copy; }
 
@@ -260,11 +317,20 @@ body.is-readme .nav::before { display: none; }
   position: fixed; inset: 0; z-index: 50; background: var(--bg);
   display: grid; place-items: center; pointer-events: none;
 }
-.intro-name { width: min(900px, 86vw); }
-.intro-name text {
-  font: 400 170px var(--font-hand); fill: transparent; stroke: var(--ink); stroke-width: 1.1;
-  stroke-dasharray: 2600; stroke-dashoffset: 2600;
+#intro.out { opacity: 0; transition: opacity 0.9s var(--ease); }
+/* The name is revealed by a soft-edged cover sliding off it to the right. Only a transform
+   animates, so the compositor plays it smoothly while the main thread builds the 3D world. */
+.intro-name {
+  position: relative; overflow: hidden; margin: 0; padding: 0 0.3em;
+  font: 400 clamp(72px, 13vw, 170px)/1.1 var(--font-hand); color: var(--ink); white-space: nowrap;
 }
+.intro-wipe {
+  position: absolute; top: 0; bottom: 0; left: -25%; width: 125%;
+  background: linear-gradient(90deg, transparent, var(--bg) 20%);
+  will-change: transform;
+}
+#intro.go .intro-wipe { animation: intro-wipe 1.8s cubic-bezier(0.45, 0, 0.4, 1) forwards; }
+@keyframes intro-wipe { to { transform: translateX(100%); } }
 
 /* ---------- Phone page: README rendered (no 3D) ---------- */
 body.is-readme { overflow: auto; }
@@ -284,3 +350,29 @@ body.is-readme { overflow: auto; }
 }
 .splash-css { animation: splash-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both, fade 0.4s 1.2s reverse forwards; transform: rotate(-3deg); }
 @keyframes splash-in { from { opacity: 0; transform: scale(0.4) rotate(-8deg); } }
+.contact.fade-in { animation-name: fade-card; }
+@keyframes fade-card { from { opacity: 0; transform: translateY(calc(-50% + 14px)) rotate(-1.5deg); } }
+
+/* Resume sheet: print / save link */
+.resume-tools { display: flex; gap: 1.6rem; justify-content: flex-end; margin: -14px -8px 6px 0; }
+.resume-tools .hand-link { font-size: 26px; color: var(--accent); }
+
+/* ---------- /resume/print: the resume as a printable document ---------- */
+body.is-print { overflow: auto; background: #e9e7e1; }
+.resume.resume-print {
+  position: static; visibility: visible; width: auto; height: auto; overflow: visible;
+  max-width: 210mm; margin: 32px auto; padding: 18mm 16mm; box-shadow: 0 10px 40px rgb(0 0 0 / 0.12);
+  --paper: #ffffff; font-size: 12.5px;
+}
+.print-bar { margin: -8mm 0 8mm; text-align: right; }
+.print-bar button {
+  font-size: 13px; padding: 9px 16px; border-radius: 99px; background: var(--ink); color: #fff;
+}
+@media print {
+  @page { size: A4; margin: 14mm 14mm; }
+  body.is-print { background: #fff; }
+  .resume.resume-print { margin: 0; padding: 0; max-width: none; box-shadow: none; font-size: 10.5pt; }
+  .print-bar { display: none; }
+  .resume-print li { break-inside: avoid; }
+  .resume-print h3 { break-after: avoid; }
+}
