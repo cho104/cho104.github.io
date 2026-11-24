@@ -1,0 +1,286 @@
+/* Palette: "Blue on paper", from PNU's 2018 trademark guide (Pantone → screen). */
+:root {
+  --bg: #f7f7f5;
+  --ink: #1d252d;            /* PNU Black */
+  --muted: #6b737a;
+  --accent: #004c97;         /* PNU Blue */
+  --line: #d0d3d4;           /* PNU Light-Gray */
+  --card: #ffffff;
+  --paper: #fbfaf6;
+
+  --font-sans: 'Instrument Sans', system-ui, sans-serif;
+  --font-hand: 'Reenie Beanie', cursive;
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --pad: clamp(16px, 2.2vw, 32px);
+}
+[data-theme='dark'] {
+  --bg: #1d252d;
+  --ink: #ededea;
+  --muted: #9aa2a9;
+  --accent: #4d8fe0;
+  --line: #3a434c;
+  --card: #232c35;
+  --paper: #26303a;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.5 var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  transition: background-color 0.6s var(--ease), color 0.6s var(--ease);
+}
+a { color: inherit; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+#gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
+
+/* ---------- Nav: small words, the current one also shown huge (Grégory-style) ---------- */
+.nav {
+  position: fixed; z-index: 20; top: 0; left: 0; right: 0;
+  display: flex; align-items: baseline; gap: 2rem;
+  padding: var(--pad);
+  pointer-events: none;
+}
+.nav > * { pointer-events: auto; }
+/* soft fade at the top so the nav stays legible over the window and photos */
+.nav::before {
+  content: ''; position: fixed; z-index: -1; inset: 0 0 auto 0; height: 110px; pointer-events: none;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 82%, transparent), transparent);
+}
+body.is-readme .nav::before { display: none; }
+.nav-home { font-weight: 600; text-decoration: none; margin-right: auto; }
+.nav-links { display: flex; gap: 0.35em; }
+.nav-links a, .nav-theme {
+  text-decoration: none; color: var(--muted);
+  transition: color 0.25s var(--ease);
+}
+.nav-links a:hover, .nav-links a.is-hot, .nav-theme:hover, .nav-theme.is-hot { color: var(--ink); }
+/* The current page's word has "become" the huge title, so it leaves a gap in the nav. */
+.nav-links a[aria-current='page'] { visibility: hidden; }
+.nav-theme .t-sep { margin: 0 0.15em; }
+[data-theme='light'] .nav-theme .t-light,
+[data-theme='dark'] .nav-theme .t-dark { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+.page-title {
+  position: fixed; z-index: 15; left: var(--pad); top: calc(var(--pad) * 2.4);
+  margin: 0; font-weight: 700; letter-spacing: -0.045em; line-height: 0.85;
+  font-size: clamp(64px, 11vw, 190px);
+  pointer-events: none; transform-origin: 0 0;
+  white-space: nowrap;
+}
+
+/* ---------- Hover labels: handwritten word + drawn arrow (Erik-style) ---------- */
+#labels { position: fixed; inset: 0; pointer-events: none; z-index: 12; }
+.label {
+  position: absolute; display: flex; align-items: center; gap: 4px;
+  font: 400 34px/1 var(--font-hand); color: var(--accent);
+  transform: translate(-50%, -100%);
+  white-space: nowrap;
+}
+.label svg { width: 64px; height: 28px; overflow: visible; }
+.draw path { stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+
+.hint {
+  position: fixed; z-index: 10; left: 50%; bottom: var(--pad); transform: translateX(-50%);
+  margin: 0; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted);
+  transition: opacity 0.5s var(--ease);
+}
+
+/* ---------- Handwritten link with an arrow that draws itself ---------- */
+.hand-link {
+  display: inline-flex; align-items: center; gap: 10px;
+  font: 400 30px/1 var(--font-hand); text-decoration: none; color: var(--ink);
+}
+.hand-link svg { width: 56px; height: 20px; overflow: visible; }
+.hand-link path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.7s var(--ease); }
+.hand-link.is-drawn path, .hand-link:hover path { stroke-dashoffset: 0; }
+
+/* ---------- Views ---------- */
+#view { position: fixed; inset: 0; z-index: 14; pointer-events: none; }
+#view > * { pointer-events: auto; }
+.fade-in { animation: fade 0.6s var(--ease) both; }
+@keyframes fade { from { opacity: 0; transform: translateY(12px); } }
+
+/* Works: Featured / Index toggle */
+.works-toggle {
+  position: fixed; left: var(--pad); bottom: var(--pad);
+  font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+  display: flex; gap: 0.4em; color: var(--muted);
+}
+.works-toggle button { color: var(--muted); text-transform: inherit; letter-spacing: inherit; }
+.works-toggle button[aria-pressed='true'] { color: var(--ink); }
+.works-caption {
+  position: fixed; left: 50%; top: 66vh; transform: translateX(-50%); margin: 0;
+  display: flex; gap: 0.9em; align-items: baseline; white-space: nowrap; font-size: 15px;
+}
+.works-caption a { text-decoration: none; font-weight: 600; }
+.works-caption a:hover { color: var(--accent); }
+.works-caption .num, .works-caption .org { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.works-back { position: fixed; right: var(--pad); bottom: calc(var(--pad) - 6px); }
+
+/* Works: Index (Jesper's Full view) */
+.index {
+  position: fixed; inset: 0; display: grid; place-items: center;
+  padding: calc(var(--pad) * 2.4 + clamp(64px, 11vw, 190px)) 12vw 10vh;
+  background: var(--bg);
+}
+.index p {
+  margin: 0; max-width: 1100px; text-align: center;
+  font-size: clamp(18px, 1.75vw, 30px); line-height: 1.5; letter-spacing: -0.01em;
+}
+.index a { white-space: nowrap; text-decoration: none; transition: color 0.3s var(--ease), opacity 0.3s; position: relative; z-index: 2; }
+.index .dot { color: var(--muted); margin: 0 0.1em; }
+.index.is-hovering a { color: var(--muted); }
+.index.is-hovering a.near { font-style: italic; }
+.index.is-hovering a.on { color: var(--ink); font-style: normal; }
+.preview {
+  position: fixed; z-index: 1; left: 0; top: 0; width: 300px; aspect-ratio: 16 / 10;
+  border-radius: 14px; overflow: hidden; pointer-events: none;
+  opacity: 0; transform: translate(-50%, -50%) scale(0.85);
+  transition: opacity 0.35s var(--ease), scale 0.35s var(--ease);
+  background: var(--line);
+}
+.preview.on { opacity: 1; }
+.preview img, .preview video, .preview canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* Project card (Jesper) */
+.card-wrap { position: fixed; inset: 0; z-index: 30; background: rgb(0 0 0 / 0.45); }
+.card {
+  position: absolute; inset: 2.2vh 2.2vw; background: var(--card); color: var(--ink);
+  border-radius: 28px; overflow: hidden;
+}
+.card-scroll {
+  position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain;
+  display: grid; grid-template-columns: minmax(280px, 1fr) 1.5fr; gap: 4vw; padding: 5vh 4vw;
+}
+.card-info { position: sticky; top: 0; align-self: start; }
+.card-info h2 { font-size: clamp(32px, 3.4vw, 54px); letter-spacing: -0.035em; line-height: 1; margin: 0 0 1.4rem; font-weight: 600; }
+.card-info p { max-width: 42ch; font-size: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 1.6rem; }
+.chip { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; padding: 7px 12px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.card-media { display: grid; gap: 4vh; }
+.card-media img, .card-media video { width: 100%; display: block; border-radius: 6px; }
+.card-empty {
+  aspect-ratio: 16 / 10; border: 1px dashed var(--line); border-radius: 6px;
+  display: grid; place-items: center; text-align: center; color: var(--muted); padding: 2rem;
+  font: 400 30px/1.1 var(--font-hand);
+}
+.card-close {
+  position: absolute; top: 22px; right: 22px; z-index: 2; width: 48px; height: 48px; border-radius: 50%;
+  background: var(--ink); color: var(--card); font-size: 20px; display: grid; place-items: center;
+}
+.card-progress { position: absolute; left: 28px; bottom: 26px; width: 26px; height: 26px; z-index: 2; }
+.card-progress circle { fill: none; stroke: var(--ink); stroke-width: 2; }
+
+/* About: bio beside the sphere */
+.about {
+  position: fixed; left: var(--pad); bottom: calc(var(--pad) * 2.5); max-width: min(440px, 36vw);
+  padding: 22px 26px; border-radius: 6px;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
+.about h2 { font: 400 64px/0.9 var(--font-hand); margin: 0 0 1rem; color: var(--ink); }
+.about p { margin: 0 0 1em; }
+.about .todo { color: var(--muted); font-style: italic; }
+
+/* Coursework: notebook page */
+.notebook {
+  position: fixed; right: 6vw; top: 12vh;
+  width: min(620px, 52vw); max-height: 78vh; overflow-y: auto;
+  visibility: hidden; /* shown when it comes out of the notebook */
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 33px, color-mix(in srgb, var(--accent) 22%, transparent) 33px 34px),
+    var(--paper);
+  background-attachment: local;
+  border-radius: 4px; padding: 34px 40px 40px 72px;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.18);
+  font: 400 30px/34px var(--font-hand);
+}
+.notebook::before {
+  content: ''; position: absolute; left: 52px; top: 0; bottom: 0; width: 1px; background: rgb(200 60 60 / 0.35);
+}
+.notebook h3 { font: inherit; font-size: 40px; margin: 0; color: var(--accent); }
+.notebook .school-detail { font-size: 24px; color: var(--muted); margin: 0; }
+.notebook ol { margin: 0 0 34px; padding-left: 1.1em; }
+.notebook .now { color: var(--accent); }
+.notebook .now::after { content: ' ← now'; font-size: 24px; }
+
+/* Resume page */
+.resume {
+  position: fixed; inset: 0; overflow-y: auto; background: var(--bg);
+  padding: calc(var(--pad) * 2.4 + clamp(64px, 11vw, 190px) + 4vh) var(--pad) 12vh;
+}
+.resume-grid { display: grid; grid-template-columns: 1fr 3fr; gap: 1.5rem 4vw; max-width: 1200px; }
+.resume h3 { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 0.3rem 0 0; font-weight: 500; }
+.resume ol { list-style: none; margin: 0 0 2.5rem; padding: 0; }
+.resume li { padding: 0.9rem 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: 1fr auto; gap: 0.2rem 2rem; }
+.resume li strong { font-weight: 600; }
+.resume li .org, .resume li .yr { color: var(--muted); }
+.resume li p { grid-column: 1 / -1; margin: 0.2rem 0 0; max-width: 70ch; color: var(--muted); }
+.resume-pdf { margin-bottom: 3rem; }
+.resume-photos { grid-column: 1 / -1; display: flex; gap: 8px; margin-top: 0.7rem; }
+.resume-photos img { height: 92px; width: auto; border-radius: 4px; display: block; transition: transform 0.3s var(--ease); }
+.resume-photos a:hover img { transform: scale(1.04); }
+
+/* Contact: iPhone screen card */
+.contact {
+  position: fixed; right: 8vw; top: 50%; transform: translateY(-50%);
+  display: grid; gap: 1.2rem;
+}
+.contact .big { font-size: clamp(26px, 2.6vw, 44px); letter-spacing: -0.02em; text-decoration: none; font-weight: 600; justify-self: start; text-align: left; }
+.contact .big:hover { color: var(--accent); }
+.contact .email { cursor: copy; }
+
+/* "copied!" splash */
+.splash {
+  position: fixed; z-index: 60; left: 50%; top: 50%; margin: -70px 0 0 -170px; width: 340px;
+  display: grid; justify-items: center; gap: 2px; padding: 26px 20px 22px; pointer-events: none;
+  background: var(--paper); color: var(--ink); border-radius: 6px; box-shadow: 0 24px 60px rgb(0 0 0 / 0.18);
+}
+.splash .word { font: 400 64px/0.9 var(--font-hand); color: var(--accent); }
+.splash .small { font-size: 13px; color: var(--muted); }
+
+/* About: handwritten caption that follows the cursor over the photo sphere */
+.photo-caption {
+  position: fixed; z-index: 16; left: 0; top: 0; margin: 0; pointer-events: none; max-width: 280px;
+  font: 400 30px/1 var(--font-hand); color: var(--ink);
+  background: var(--paper); padding: 6px 12px 4px; border-radius: 3px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  opacity: 0; transition: opacity 0.2s var(--ease);
+}
+.photo-caption.on { opacity: 1; }
+
+/* ---------- Intro: handwritten name draws in ---------- */
+#intro {
+  position: fixed; inset: 0; z-index: 50; background: var(--bg);
+  display: grid; place-items: center; pointer-events: none;
+}
+.intro-name { width: min(900px, 86vw); }
+.intro-name text {
+  font: 400 170px var(--font-hand); fill: transparent; stroke: var(--ink); stroke-width: 1.1;
+  stroke-dasharray: 2600; stroke-dashoffset: 2600;
+}
+
+/* ---------- Phone page: README rendered (no 3D) ---------- */
+body.is-readme { overflow: auto; }
+.readme { max-width: 720px; margin: 0 auto; padding: 96px 22px 80px; }
+.readme h1 { font: 400 64px/1 var(--font-hand); margin: 0 0 0.4rem; }
+.readme h3 { font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin: 3rem 0 1rem; font-weight: 500; }
+.readme h4 { margin: 1.6rem 0 0.4rem; font-weight: 600; }
+.readme ol { padding-left: 1.3em; }
+.readme li { margin: 0.5rem 0; }
+.readme li p { margin: 0; }
+.readme img, .readme video { max-width: 100%; border-radius: 8px; margin: 0.6rem 0; }
+.readme img.thumb { width: calc(33.33% - 6px); aspect-ratio: 1; object-fit: cover; margin: 3px; border-radius: 6px; vertical-align: top; }
+.readme-contact a { color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01s !important; transition-duration: 0.01s !important; }
+}
+.splash-css { animation: splash-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both, fade 0.4s 1.2s reverse forwards; transform: rotate(-3deg); }
+@keyframes splash-in { from { opacity: 0; transform: scale(0.4) rotate(-8deg); } }
