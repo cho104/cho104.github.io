@@ -8,11 +8,9 @@ chio4696@pusan.ac.kr |
 
 I’m Chioh, a sophomore CS student at Pusan National University in Busan, South Korea.
 
-I’m most interested in how models learn without labels, specifically contrastive and self-supervised vision models (from CLIP to DINO), and knowledge distillation, where a student learns from a teacher or its own past self. The idea I keep coming back to is that you don’t necessarily need a bigger teacher, just the right asymmetry between what the teacher and student get to see.
+I’m most interested in how models learn without labels, particularly contrastive and self-supervised vision models (from CLIP to DINO) and knowledge distillation, where a student learns from a teacher or its own past self. The idea I keep coming back to is that you don’t necessarily need a bigger teacher, just the right asymmetry between what the teacher and student get to see.
 
-I also love building and competing, from reaching USACO Platinum to winning 1st place in a multimodal AI challenge.
-
-As vice president of PNU’s AI Developers Club, I lead the research group, give seminars, and organize competitions.
+Alongside research, I enjoy algorithmic problem solving and building applied ML projects across speech and multimodal data. As vice president of AI Developers Club, I lead the research group, give seminars, and help organize campus coding and ML events.
 
 Away from my desk, you can find me restoring vintage keyboards, birdwatching, out on a 3-mile run, or making another McDonald’s run.
 
@@ -36,10 +34,10 @@ Away from my desk, you can find me restoring vintage keyboards, birdwatching, ou
 3. Probabilities and Statistics  
 4. Engineering Linear Algebra  
 5. Machine Learning  
-6. Introductions to Computer Vision  
+6. Introduction to Computer Vision  
 7. Foundations of Generative AI  
 8. AI Programming  
-9. Introductions to Artificial Intelligence  
+9. Introduction to Artificial Intelligence  
 10. Mathematics for Artificial Intelligence  
 11. (Current) Databases
 12. (Current) Software Engineering
@@ -65,7 +63,7 @@ Assisted Ms. Maria London in teaching, led lessons with substitutes, and created
 Resolved technical issues, assisted with IT maintenance, and supported school-wide tech operations. Gained experience in troubleshooting & management on wireless networking.
 
 5. **AI Discussion Forum Mentor** (Deeplearning.AI)  
-Engaged in discussions, troubleshooting framework issues, and mentoring peers. Deepened knowledge through collaborative problem resolution especially on Tensorflow.
+Engaged in discussions, troubleshooting framework issues, and mentoring peers. Deepened knowledge through collaborative problem resolution especially on TensorFlow.
 <img src="img/projects/dlai-mentor/01-onboarding.jpg" width="160">
 
 6. **Volunteer Data Scientist** (ENGin: Ukrainian Humanitarian/Educational Organization)  
@@ -77,7 +75,7 @@ Analyzed water data and reviewed Orange County’s water scorecard. Assessed con
 <img src="img/projects/sierra-club/01-scorecard.png" alt="Water quality scorecard" width="160"> <img src="img/projects/sierra-club/02-scorecard.png" alt="Water quality scorecard, continued" width="160">
 
 8. **Summer Deep Learning Research Internship** (George Mason University)  
-Conducted research on sockpuppet detection in Wikipedia, focusing on feature selection for automated systems under Dr. Mihai Boicu. Contributed to a systematic review, gaining experience in data analysis fine-tuning pre-trained Pytorch models. Published the work to the student journal.
+Conducted research on sockpuppet detection in Wikipedia, focusing on feature selection for automated systems under Dr. Mihai Boicu. Contributed to a systematic review, gaining experience in data analysis and fine-tuning pre-trained PyTorch models. Published the work to the student journal.
 <img src="img/projects/gmu/01-poster.jpg" width="160"> <img src="img/projects/gmu/02-program.jpg" width="160"> <img src="img/projects/gmu/03-poster-session.jpg" width="160"> <img src="img/projects/gmu/04-poster-session.jpg" width="160"> https://doi.org/10.13021/jssr2023.3851
 
 9. **Summer Deep Learning Research Internship** (American University)  
@@ -97,7 +95,7 @@ Co-authored with Yeonwoo Park (Hanyang University ERICA). Speech encoders such a
 https://www.isca-archive.org/interspeech_2026/park26l_interspeech.pdf
 
 13. **AI Developers Club Vice President** (Pusan National University)  
-Wrote 2 deep learning methodology review articles and published during my time in the research group. Presented some research and development trends during the seminars. Currently serving as the research group leader, the recommender system team mentor, and the vice president of the club since fall 2026.
+Wrote and published two deep learning methodology review articles during my time in the research group. Presented some research and development trends during the seminars. Currently serving as the research group leader, the recommender system team mentor, and the vice president of the club since fall 2026.
 <img src="img/projects/aid/01-presentation.jpg" width="160"> <img src="img/projects/aid/02-club.jpg" width="160"> <img src="img/projects/aid/04-trend-review-talk.jpg" alt="AI Trend Review seminar" width="160"> <img src="img/projects/aid/05-distillation-seminar.jpg" alt="November seminar: knowledge distillation" width="160"> <img src="img/projects/aid/06-distillation-talk.jpg" alt="Presenting soft vs. hard-label distillation" width="160"> <img src="img/projects/aid/03-gaussian-splatting.png" alt="From a research group column: point cloud and 3D Gaussian Splatting render" width="160"> https://velog.io/@aideveloper/25-1-AI-%EB%85%BC%EB%AC%B8%EB%A6%AC%EB%94%A9-%EC%8A%A4%ED%84%B0%EB%94%94-%EA%B2%B0%EC%82%B0-2511bt70 https://github.com/zeehy/AID_AI_PaperReview_Study https://github.com/cho104/AIResearchers  https://app.notion.com/p/aidpnu/30ef0e0d194f80ebb814df744ff2ad23
 [Slides: AI Trend Review](img/projects/aid/trend-review.pdf) [Slides: CLIP variants, DINO and distillation seminars](img/projects/aid/clip-dino-distillation-seminars.pdf) [Slides: On the Generalization of SFT (paper review)](img/projects/aid/sft-generalization-review.pdf)
 
@@ -105,8 +103,8 @@ Wrote 2 deep learning methodology review articles and published during my time i
 Swapped TinyLoRA's Truncated-SVD w/ other variants and experimented with them, conducted additional experiment of SFT-ing on RL initialized Fisher information SVD variant, which reproduced RL performance in the SFT.
 <img src="img/projects/tinylora/01-reward.jpg" width="160"> https://github.com/cho104/TinyLoRA-RL-SVD
 
-15. **Apple Keyboard Restoration** (Personal)
-Took a vintage Apple keyboard apart down to the plate, cleaned and serviced the switches and case, and rebuilt it in Bluetooth enabled version!
+15. **Apple Keyboard Restoration** (Personal)  
+Took a vintage Apple keyboard apart down to the plate, cleaned and serviced the switches and case, and rebuilt it as a Bluetooth-enabled keyboard!
 <img src="img/projects/keyboard/01-desk.jpg" width="160"> <img src="img/projects/keyboard/02-keys.jpg" width="160"> <img src="img/projects/keyboard/03-teardown.jpg" width="160"> <img src="img/projects/keyboard/04-plate.jpg" width="160"> <img src="img/projects/keyboard/07-switches.jpg" width="160">
 
 16. **PreeT: Expense Checker for Sole Proprietors** (Kakao Tech Campus, 2026)  
@@ -119,15 +117,15 @@ Built with one teammate as team Fried Pistachio. Provit checks whether an upload
 <img src="img/projects/provit/02-steps.png" alt="Analysis steps" width="160"> <img src="img/projects/provit/03-verdict.png" alt="Final verdict with the LLM's justification" width="160"> <img src="img/projects/provit/04-extension.png" alt="Chrome extension: verifying an image from the web" width="160">
 https://github.com/cho104/DAIC-Fried-Pistachio [Slides: Provit](img/projects/provit/provit-slides.pdf)
 
-18. **AI Competition Organizer** (Pusan National University, 2026)
+18. **AI Competition Organizer** (Pusan National University, 2026)  
 Organized two AI competitions on campus photos in November 2026. In the AI mini Challenge, an individual contest, entrants trained an image classifier to tell the 6th Engineering Building from the IT Building, scored by log loss on a hidden private split; the organizers re-ran the winners' code to confirm their scores. In Track B of the PNU CSE AI·PS Challenge, teams detected campus buildings in photos, scored by mAP@0.5, starting from a baseline notebook.
 <img src="img/projects/ai-competitions/01-ai-mini-challenge.png" alt="2026 AI mini Challenge" width="160"> <img src="img/projects/ai-competitions/02-ai-ps-challenge.png" alt="2026 PNU CSE AI·PS Challenge, Track B: campus building detection" width="160">
 
 ### **Honors**
 
-1. **U.S. National Cyber Scholarship Finalist**, Nationwide (2022)
+1. **U.S. National Cyber Scholarship Finalist**, Nationwide (2022)  
 https://www.nationalcyberscholarship.org/ncsf-winners-2022
-2. **U.S. National Cyber Scholarship Scholar**, Nationwide (2023)
+2. **U.S. National Cyber Scholarship Scholar**, Nationwide (2023)  
 https://www.nationalcyberscholarship.org/ncsf-winners-2023
 <img src="img/honors/ncs/01-top-20.jpg" width="160">
 3. **U.S. National Cyber Scholarship Honor Scholar**, Nationwide (2023)  
@@ -138,11 +136,11 @@ https://www.nationalcyberscholarship.org/scholars-with-honors-2023
 <img src="img/honors/cse-programming-2025/01-stage.jpg" width="160">
 6. **National Program of Excellence in Software Joint AI Competition 1st Place** (2025)  
 <img src="img/honors/ai-challenge-2025/01-results.jpg" width="160"> <img src="img/honors/ai-challenge-2025/02-leaderboard.jpg" width="160"> https://github.com/cho104/AI-Chellenge-Ovis2_5 [Slides: Trial & Greedy Selection](img/honors/ai-challenge-2025/trial-and-greedy-selection.pdf)
-7. **PNU CSE Programming Competition 1nd Place - Sophomore** (2026)  
+7. **PNU CSE Programming Competition 1st Place - Sophomore** (2026)  
 <img src="img/honors/cse-programming-2026/01-stage.jpg" width="160">
-8. **Kakao Ideathon Excellence Award**, Team 4 (2026)
+8. **Kakao Ideathon Excellence Award**, Team 4 (2026)  
 <img src="img/honors/kakao-ideathon-2026/01-stage.jpg" width="160"> <img src="img/honors/kakao-ideathon-2026/02-pitch.jpg" width="160"> https://github.com/kakaotechcampus-4/ktc4-pusan-4
-9. **PNU CSE Autonomous Robot Search & Rescue Hackathon 3rd Place** (2026)
+9. **PNU CSE Autonomous Robot Search & Rescue Hackathon 3rd Place** (2026)  
 <img src="img/honors/rescue-hackathon-2026/01-stage.jpg" width="160"> https://github.com/cho104/pathfinders
 
 ### **Certificates**  

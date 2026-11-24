@@ -1,10 +1,9 @@
-/* Palette: "Blue on paper", from PNU's 2018 trademark guide (Pantone → screen). */
 :root {
   --bg: #f7f7f5;
-  --ink: #1d252d;            /* PNU Black */
+  --ink: #1d252d;
   --muted: #6b737a;
-  --accent: #004c97;         /* PNU Blue */
-  --line: #d0d3d4;           /* PNU Light-Gray */
+  --accent: #004c97;
+  --line: #d0d3d4;
   --card: #ffffff;
   --paper: #fbfaf6;
 
@@ -40,7 +39,6 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 
 #gl { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; }
 
-/* ---------- Nav: small words, the current one also shown huge (Grégory-style) ---------- */
 .nav {
   position: fixed; z-index: 20; top: 0; left: 0; right: 0;
   display: flex; align-items: baseline; gap: 2rem;
@@ -48,16 +46,13 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   pointer-events: none;
 }
 .nav > * { pointer-events: auto; }
-/* soft fade at the top so the nav stays legible over the window and photos */
 .nav::before {
   content: ''; position: fixed; z-index: -1; inset: 0 0 auto 0; height: 110px; pointer-events: none;
   background: linear-gradient(to bottom, color-mix(in srgb, var(--bg) 82%, transparent), transparent);
 }
 body.is-readme .nav::before { display: none; }
 .nav::before { transition: opacity 0.6s var(--ease); }
-/* over the wallpaper: instead of the paper fade, the sky darkens a little overhead */
 body[data-wall] .nav::before { height: 150px; background: linear-gradient(to bottom, rgb(4 28 72 / 0.38), transparent); }
-/* Works ring: white text on the sky-and-hill wallpaper (the project card keeps its own colors) */
 body[data-wall] :is(.nav, .page-title, .hint, .works-toggle, .works-caption, .back) {
   --ink: #ffffff; --muted: rgb(255 255 255 / 0.8); --accent: #ffffff;
   color: var(--ink);
@@ -69,7 +64,6 @@ body[data-wall] .works-caption a:hover { text-decoration: underline; text-underl
   font-size: clamp(22px, 1.9vw, 32px); letter-spacing: -0.025em; line-height: 1;
   transition: opacity 0.5s var(--ease);
 }
-/* away from the desk the page title takes the corner; the name steps aside */
 body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events: none; }
 .nav-links { display: flex; gap: 0.35em; }
 .nav-links a, .nav-theme {
@@ -77,7 +71,6 @@ body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events
   transition: color 0.25s var(--ease);
 }
 .nav-links a:hover, .nav-links a.is-hot, .nav-theme:hover, .nav-theme.is-hot { color: var(--ink); }
-/* The current page's word has "become" the huge title, so it leaves a gap in the nav. */
 .nav-links a[aria-current='page'] { visibility: hidden; }
 .nav-theme .t-sep { margin: 0 0.15em; }
 [data-theme='light'] .nav-theme .t-light,
@@ -91,7 +84,6 @@ body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events
   white-space: nowrap;
 }
 
-/* ---------- Hover labels: handwritten word + drawn arrow (Erik-style) ---------- */
 #labels { position: fixed; inset: 0; pointer-events: none; z-index: 12; }
 .label {
   position: absolute; display: flex; align-items: center; gap: 4px;
@@ -108,7 +100,6 @@ body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events
   transition: opacity 0.5s var(--ease);
 }
 
-/* ---------- Handwritten link with an arrow that draws itself ---------- */
 .hand-link {
   display: inline-flex; align-items: center; gap: 10px;
   font: 400 30px/1 var(--font-hand); text-decoration: none; color: var(--ink);
@@ -117,13 +108,11 @@ body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events
 .hand-link path { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 0.7s var(--ease); }
 .hand-link.is-drawn path, .hand-link:hover path { stroke-dashoffset: 0; }
 
-/* ---------- Views ---------- */
 #view { position: fixed; inset: 0; z-index: 14; pointer-events: none; }
 #view > * { pointer-events: auto; }
 .fade-in { animation: fade 0.6s var(--ease) both; }
 @keyframes fade { from { opacity: 0; transform: translateY(12px); } }
 
-/* Works: Featured / Index toggle */
 .works-toggle {
   position: fixed; left: var(--pad); bottom: var(--pad);
   font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;
@@ -138,29 +127,24 @@ body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events
 .works-caption a { text-decoration: none; font-weight: 600; }
 .works-caption a:hover { color: var(--accent); }
 .works-caption .num, .works-caption .org { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
-/* "back to the desk", on every page but the desk */
 .back { position: fixed; z-index: 18; right: var(--pad); bottom: calc(var(--pad) - 6px); }
 
-/* Loose paper (coursework page, resume, contact card): always real paper with dark ink,
-   whatever the theme or whatever is behind it on the desk. */
 .paper-sheet {
   --ink: #1d252d; --muted: #5f676e; --accent: #004c97; --line: #d6d8d9; --paper: #fbfaf6;
   color: var(--ink);
 }
 [data-theme='dark'] .paper-sheet { --paper: #e8e5dd; --line: #cbc8c0; }
 
-/* Works: Index (Jesper's Full view) */
 .index {
   position: fixed; inset: 0; display: grid; place-items: center;
   padding: calc(var(--pad) * 2.4 + clamp(64px, 11vw, 190px)) 12vw 10vh;
   background: var(--bg);
 }
-/* Works: Index on the wallpaper: the page itself is see-through, the titles go white */
 body[data-wall] .index {
   background: none;
   --ink: #ffffff; --muted: rgb(255 255 255 / 0.7);
   color: var(--ink);
-  text-shadow: 0 1px 3px rgb(0 0 0 / 0.3); /* small: hundreds of letters move under the lens */
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.3);
 }
 .index p {
   margin: 0; max-width: 1100px; text-align: center;
@@ -181,7 +165,6 @@ body[data-wall] .index {
 .preview.on { opacity: 1; }
 .preview img, .preview video, .preview canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* Project card (Jesper) */
 .card-wrap { position: fixed; inset: 0; z-index: 30; background: rgb(0 0 0 / 0.45); }
 .card {
   position: absolute; inset: 2.2vh 2.2vw; background: var(--card); color: var(--ink);
@@ -202,7 +185,6 @@ body[data-wall] .index {
 .card-links a, .resume-links a { color: var(--accent); text-decoration: none; border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); }
 .card-links a::after, .resume-links a::after { content: ' ↗'; }
 .card-links a:hover, .resume-links a:hover { border-bottom-color: var(--accent); }
-/* attached documents: a first-page preview with its name under it */
 .doc { display: block; text-decoration: none; color: inherit; }
 .doc img { border: 1px solid var(--line); transition: transform 0.4s var(--ease); }
 .doc:hover img { transform: translateY(-4px); }
@@ -221,7 +203,6 @@ body[data-wall] .index {
 .card-progress { position: absolute; left: 28px; bottom: 26px; width: 26px; height: 26px; z-index: 2; }
 .card-progress circle { fill: none; stroke: var(--ink); stroke-width: 2; }
 
-/* About: bio beside the sphere */
 .about {
   position: fixed; left: var(--pad); bottom: calc(var(--pad) * 2.5); max-width: min(440px, 36vw);
   max-height: calc(100vh - var(--pad) * 2.5 - 190px); overflow-y: auto; overscroll-behavior: contain;
@@ -233,7 +214,6 @@ body[data-wall] .index {
 .about p { margin: 0 0 1em; }
 .about .todo { color: var(--muted); font-style: italic; }
 
-/* Coursework: a page out of the notebook (flown in and out by ui/paper.js) */
 .notebook {
   position: fixed; z-index: 17; right: 6vw; top: 9vh;
   width: min(620px, 50vw); max-height: 80vh; overflow-y: auto; overscroll-behavior: contain;
@@ -256,7 +236,6 @@ body[data-wall] .index {
 .notebook .now { color: var(--accent); }
 .notebook .now::after { content: ' ← now'; font-size: 24px; }
 
-/* Resume: the clipped sheet, drawn out from under the binder clip */
 .resume {
   position: fixed; z-index: 17; right: 6vw; top: 9vh;
   width: min(780px, 58vw); height: 80vh; overflow-y: auto; overscroll-behavior: contain;
@@ -283,7 +262,6 @@ body[data-wall] .index {
 .resume-photos img { height: 84px; width: auto; border-radius: 3px; display: block; transition: transform 0.3s var(--ease); }
 .resume-photos a:hover img { transform: scale(1.04); }
 
-/* Contact: a note card beside the phone */
 .contact {
   position: fixed; right: 7vw; top: 50%; transform: translateY(-50%) rotate(-1.5deg);
   display: grid; gap: 0.9rem; padding: 26px 36px 34px;
@@ -294,7 +272,6 @@ body[data-wall] .index {
 .contact .big:hover { color: var(--accent); }
 .contact .email { cursor: copy; }
 
-/* "copied!" splash */
 .splash {
   position: fixed; z-index: 60; left: 50%; top: 50%; margin: -70px 0 0 -170px; width: 340px;
   display: grid; justify-items: center; gap: 2px; padding: 26px 20px 22px; pointer-events: none;
@@ -303,7 +280,6 @@ body[data-wall] .index {
 .splash .word { font: 400 64px/0.9 var(--font-hand); color: var(--accent); }
 .splash .small { font-size: 13px; color: var(--muted); }
 
-/* About: handwritten caption that follows the cursor over the photo sphere */
 .photo-caption {
   position: fixed; z-index: 16; left: 0; top: 0; margin: 0; pointer-events: none; max-width: 280px;
   font: 400 30px/1 var(--font-hand); color: var(--ink);
@@ -312,14 +288,11 @@ body[data-wall] .index {
 }
 .photo-caption.on { opacity: 1; }
 
-/* ---------- Intro: handwritten name draws in ---------- */
 #intro {
   position: fixed; inset: 0; z-index: 50; background: var(--bg);
   display: grid; place-items: center; pointer-events: none;
 }
 #intro.out { opacity: 0; transition: opacity 0.9s var(--ease); }
-/* The name is revealed by a soft-edged cover sliding off it to the right. Only a transform
-   animates, so the compositor plays it smoothly while the main thread builds the 3D world. */
 .intro-name {
   position: relative; overflow: hidden; margin: 0; padding: 0 0.3em;
   font: 400 clamp(72px, 13vw, 170px)/1.1 var(--font-hand); color: var(--ink); white-space: nowrap;
@@ -332,7 +305,6 @@ body[data-wall] .index {
 #intro.go .intro-wipe { animation: intro-wipe 1.8s cubic-bezier(0.45, 0, 0.4, 1) forwards; }
 @keyframes intro-wipe { to { transform: translateX(100%); } }
 
-/* ---------- Phone page: README rendered (no 3D) ---------- */
 body.is-readme { overflow: auto; }
 .readme { max-width: 720px; margin: 0 auto; padding: 96px 22px 80px; }
 .readme h1 { font: 400 64px/1 var(--font-hand); margin: 0 0 0.4rem; }
@@ -353,11 +325,9 @@ body.is-readme { overflow: auto; }
 .contact.fade-in { animation-name: fade-card; }
 @keyframes fade-card { from { opacity: 0; transform: translateY(calc(-50% + 14px)) rotate(-1.5deg); } }
 
-/* Resume sheet: print / save link */
 .resume-tools { display: flex; gap: 1.6rem; justify-content: flex-end; margin: -14px -8px 6px 0; }
 .resume-tools .hand-link { font-size: 26px; color: var(--accent); }
 
-/* ---------- /resume/print: the resume as a printable document ---------- */
 body.is-print { overflow: auto; background: #e9e7e1; }
 .resume.resume-print {
   position: static; visibility: visible; width: auto; height: auto; overflow: visible;

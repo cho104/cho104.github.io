@@ -1,9 +1,4 @@
-// Canvas-drawn textures used until (or instead of) real media.
 import * as THREE from 'three';
-
-export function cssVar(name) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
 
 function canvasTex(w, h, draw) {
   const c = document.createElement('canvas');
@@ -32,7 +27,6 @@ function wrap(ctx, text, x, y, maxW, lineH, maxLines = 4) {
   return n + 1;
 }
 
-// Typographic project panel: shown on the ring until the README gives the project media.
 export function panelTexture(project, index, theme) {
   const dark = theme === 'dark';
   return canvasTex(1600, 1000, (ctx, w, h) => {
@@ -56,7 +50,6 @@ export function panelTexture(project, index, theme) {
   });
 }
 
-// Soft paper-toned stand-ins for personal photos on the wall.
 const PHOTO_TONES = ['#d9d4c7', '#c9d1d6', '#d6cfc9', '#cfd6c8', '#dcd8d0', '#c8ccd4', '#e0dad2', '#cfc9c1'];
 export function photoPlaceholder(i) {
   return canvasTex(400, 500, (ctx, w, h) => {
@@ -72,43 +65,6 @@ export function photoPlaceholder(i) {
   });
 }
 
-// MacBook wallpaper: a tiny view of the grid space you are about to fly into.
-export function laptopScreen(theme) {
-  const dark = theme === 'dark';
-  return canvasTex(1024, 640, (ctx, w, h) => {
-    ctx.fillStyle = dark ? '#1d252d' : '#f7f7f5';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = dark ? '#3a434c' : '#d0d3d4';
-    ctx.lineWidth = 1.5;
-    const hz = h * 0.62;
-    for (let i = -14; i <= 14; i++) {
-      ctx.beginPath();
-      ctx.moveTo(w / 2 + i * 18, hz);
-      ctx.lineTo(w / 2 + i * 120, h);
-      ctx.stroke();
-    }
-    for (let k = 0; k < 9; k++) {
-      const y = hz + Math.pow(k / 8, 2) * (h - hz);
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(w, y);
-      ctx.stroke();
-    }
-    // a hint of the panel ring
-    const panels = [
-      [0.12, 0.3, 0.2], [0.36, 0.26, 0.28], [0.68, 0.3, 0.2],
-    ];
-    for (const [x, y, pw] of panels) {
-      ctx.fillStyle = dark ? '#26303a' : '#ffffff';
-      ctx.strokeStyle = dark ? '#3a434c' : '#d0d3d4';
-      ctx.beginPath();
-      ctx.roundRect(x * w, y * h, pw * w, pw * w * 0.62, 10);
-      ctx.fill();
-      ctx.stroke();
-    }
-  });
-}
-
 export function phoneScreen(on, contact, theme = 'light') {
   const dark = theme === 'dark';
   return canvasTex(390, 844, (ctx, w, h) => {
@@ -121,7 +77,6 @@ export function phoneScreen(on, contact, theme = 'light') {
     ctx.textAlign = 'left';
     ctx.fillText('9:41', 48, 52);
     ctx.textAlign = 'center';
-    // Dynamic Island
     ctx.fillStyle = '#000';
     ctx.beginPath();
     ctx.roundRect(w / 2 - 62, 18, 124, 36, 18);

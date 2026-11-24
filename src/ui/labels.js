@@ -1,5 +1,3 @@
-// Handwritten hover labels that point at desk objects. Positions come from the 3D scene
-// each frame (projected to screen space).
 import { gsap } from 'gsap';
 import { arrowSVG } from './hand.js';
 
@@ -10,7 +8,6 @@ let shownText = null;
 
 export function showLabel(id, text) {
   if (shownId === id) {
-    // same object, new words (the lamp: "lights off" ↔ "lights on"): rewrite them in place
     if (text !== shownText && el) {
       shownText = text;
       const span = el.querySelector('span');
@@ -42,10 +39,8 @@ export function hideLabel() {
   gsap.to(old, { opacity: 0, duration: 0.2, onComplete: () => old.remove() });
 }
 
-// Anchor point on screen: the arrow tip sits just above the object.
 export function placeLabel(pos) {
   if (!el || !pos) return;
-  // keep the whole label on screen (it is centred on x by translate(-50%))
   const half = el.offsetWidth / 2;
   const x = Math.min(innerWidth - half - 12, Math.max(half + 12, pos.x - 30));
   el.style.left = `${x}px`;

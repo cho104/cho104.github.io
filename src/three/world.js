@@ -1,5 +1,3 @@
-// One renderer and camera for the whole site. Two scenes: the desk, and the space inside the
-// MacBook (works ring). Routes move the camera between "shots".
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { buildDesk, setHullColor } from './desk.js';
@@ -7,7 +5,6 @@ import { buildWorks } from './works.js';
 
 const NAV_IDS = ['coursework', 'resume', 'works', 'contact', 'about', 'lamp'];
 
-// Camera shots: [position, look-at target, fov]
 const SHOTS = {
   home: [[0, 1.34, 1.36], [0, 1.0, -0.12], 36],
   coursework: [[-0.48, 1.3, 0.56], [-0.6, 0.76, 0.0], 34],
@@ -31,22 +28,15 @@ export function createWorld({ canvas, content, theme, on }) {
   const works = buildWorks({ content, theme, renderer });
   works.setTheme(theme);
 
-  // Live MacBook screen: the works ring rendered from inside, every frame.
   const screenRT = new THREE.WebGLRenderTarget(1024, 688, { samples: 4 });
   const screenCam = new THREE.PerspectiveCamera(46, 1024 / 688, 0.01, 200);
   screenCam.position.set(0, 0.15, 0);
   screenCam.lookAt(0, 0, -1);
   const screen = desk.objects.works.screen;
   screen.material.map = screenRT.texture;
-  // the screen shows the works view exactly as it looks inside (no filmic tone mapping), so
-  // its colors don't jump when the view takes over
   screen.material.toneMapped = false;
   screen.material.needsUpdate = true;
   screen.userData.live = true;
-  // The screen is off (black glass) on the desk; it wakes as the camera heads into it and goes
-  // dark again once the camera has pulled back out. While off, the ring isn't drawn for it.
-  // Off is a plain dark glass texture, not the last picture turned down (that left a ghost of
-  // the ring); swapping one texture for another needs no new shader, so waking doesn't stall.
   const offTex = new THREE.DataTexture(new Uint8Array([9, 10, 12, 255]), 1, 1);
   offTex.colorSpace = THREE.SRGBColorSpace;
   offTex.needsUpdate = true;
@@ -54,7 +44,6 @@ export function createWorld({ canvas, content, theme, on }) {
   const showPower = () => {
     const off = power.v <= 0.001;
     screen.material.map = off ? offTex : screenRT.texture;
-    // waking: the picture comes up out of the dark
     screen.material.color.setScalar(off ? 1 : 0.035 + 0.965 * power.v);
   };
   showPower();
@@ -63,20 +52,17 @@ export function createWorld({ canvas, content, theme, on }) {
 
   setHullColor(theme === 'dark' ? '#4d8fe0' : '#004c97');
 
-  let mode = 'desk'; // 'desk' | 'works'
+  let mode = 'desk';
   let route = 'home';
-  let hot = null; // hovered nav object id
+  let hot = null;
   let busy = false;
 
-  // --- camera helpers -----------------------------------------------------------------------
   const pos = new THREE.Vector3(...SHOTS.home[0]);
   const tgt = new THREE.Vector3(...SHOTS.home[1]);
   camera.position.copy(pos);
   camera.lookAt(tgt);
 
   function screenShot() {
-    // measured with the MacBook at rest: it may still be lifted from a hover that is just
-    // settling, and aiming at the lifted screen leaves the view a little off at the end
     const s = desk.objects.works.screen;
     const root = desk.objects.works.root;
     const y = root.position.y;
@@ -86,14 +72,11 @@ export function createWorld({ canvas, content, theme, on }) {
     const n = new THREE.Vector3(0, 0, 1).transformDirection(s.matrixWorld);
     root.position.y = y;
     s.updateWorldMatrix(true, false);
-    // close enough that the screen's height exactly fills the view
     const h = s.geometry.parameters.height;
     const d = h / 2 / Math.tan(THREE.MathUtils.degToRad(36 / 2));
     return [c.clone().addScaledVector(n, d), c, 36];
   }
 
-  // Shots are framed for a 16:10 window; narrower windows pull the camera back so the
-  // same things stay in view.
   function fit(shot) {
     const [p, t, fov] = shot;
     const k = Math.min(2.2, Math.max(1, 1.6 / camera.aspect));
@@ -103,8 +86,6 @@ export function createWorld({ canvas, content, theme, on }) {
     return [pv.toArray(), t, fov];
   }
 
-  // A tween as a promise that also settles when the tween is killed or overwritten, so an
-  // interrupted move (a nav click mid-flight) never leaves anything waiting forever.
   const tween = (target, vars) =>
     new Promise((done) => gsap.to(target, { overwrite: 'auto', ...vars, onComplete: done, onInterrupt: done }));
 
@@ -118,10 +99,6 @@ export function createWorld({ canvas, content, theme, on }) {
     ]);
   }
 
-  // --- entering / leaving the MacBook ---------------------------------------------------------
-  // Into / out of the MacBook. The screen shows the works ring from the very camera used
-  // inside, so when the screen fills the view the two images line up; the desk around it
-  // dissolves (works rendered to a texture and faded over the desk), then the scenes swap.
   const WORKS_POS = new THREE.Vector3(0, 0.15, 0);
   const WORKS_TGT = new THREE.Vector3(0, 0, -1);
   const WORKS_FOV = 46;
@@ -138,13 +115,10 @@ export function createWorld({ canvas, content, theme, on }) {
     if (mode === 'works') return;
     busy = true;
     setPower(true);
-    // the dissolve starts while the camera is settling onto the screen, so there's no stop
-    // and wait; by then the screen's picture and the full view line up, so it's only the
-    // bezel around the screen that fades away
     const move = shotTween(screenShot(), 1.15, 'power2.inOut');
     const fade = tween(fadeMat, { opacity: 1, duration: 0.3, delay: 0.95, ease: 'power1.inOut' });
     await Promise.all([move, fade]);
-    if (my !== seq) return; // another route was chosen on the way in
+    if (my !== seq) return;
     mode = 'works';
     lastIndex = -1;
     pos.copy(WORKS_POS);
@@ -155,8 +129,6 @@ export function createWorld({ canvas, content, theme, on }) {
     busy = false;
   }
 
-  // Reverse: start at the screen with the works view on top, dissolve it, and the camera
-  // pulls back from the MacBook (the caller tweens to the next shot right away).
   function leaveWorks() {
     if (mode !== 'works') return;
     mode = 'desk';
@@ -167,16 +139,16 @@ export function createWorld({ canvas, content, theme, on }) {
     camera.updateProjectionMatrix();
     fadeMat.opacity = 1;
     gsap.to(fadeMat, { opacity: 0, duration: 0.5, delay: 0.05, ease: 'power1.inOut', overwrite: true });
-    setPower(false, 1.1); // once the camera is back out
+    setPower(false, 1.1);
   }
 
-  // --- routes ---------------------------------------------------------------------------------
-  let seq = 0; // bumps on every route change; async steps of an older change stop when it moves on
+  let seq = 0;
   async function setRoute(next) {
     const my = ++seq;
     const prev = route;
     route = next;
     busy = false;
+    settleUntil = performance.now() + 2500;
     setHot(null);
     setNote(null);
     if (prev === 'about' && next !== 'about') {
@@ -191,7 +163,6 @@ export function createWorld({ canvas, content, theme, on }) {
     if (next === 'works') return enterWorks(my);
     if (mode === 'works') leaveWorks();
     else if (fadeMat.opacity > 0) {
-      // left while still diving into the MacBook: drop the half-faded works view
       gsap.to(fadeMat, { opacity: 0, duration: 0.35, ease: 'power1.out', overwrite: true });
       setPower(false, 0.5);
     }
@@ -208,9 +179,6 @@ export function createWorld({ canvas, content, theme, on }) {
     return my === seq;
   }
 
-  // --- loose paper (coursework page, resume sheet) ---------------------------------------------
-  // The 3D sheet slides out (from under the clip / off the notebook), then the DOM page takes
-  // over at exactly the sheet's place on screen and flies up to be read; and back again.
   const paperBase = new Map();
   function paperSlide(id, out, duration = 0.55) {
     const p = desk.objects[id].paper;
@@ -235,8 +203,6 @@ export function createWorld({ canvas, content, theme, on }) {
     }
     m.visible = true;
   }
-  // Pose of the sheet's top face: centre, orientation (x = page right, y = page up, z = out of
-  // the page) and size, all in world space.
   const _m = new THREE.Matrix4();
   function paperPose(id) {
     const p = desk.objects[id].paper;
@@ -253,12 +219,11 @@ export function createWorld({ canvas, content, theme, on }) {
     camera.lookAt(tgt);
     camera.updateMatrixWorld();
   }
-  // The pose a sheet of height h needs, facing the camera, to cover `rect` (screen px) exactly.
   function viewPose(rect, h) {
     syncCamera();
     const f = innerHeight / 2 / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
     const d = (f * h) / rect.height;
-    const k = d / f; // metres per pixel at that depth
+    const k = d / f;
     const q = camera.quaternion.clone();
     const X = new THREE.Vector3(1, 0, 0).applyQuaternion(q);
     const Y = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
@@ -273,13 +238,13 @@ export function createWorld({ canvas, content, theme, on }) {
     return [(v.x * 0.5 + 0.5) * innerWidth, (-v.y * 0.5 + 0.5) * innerHeight];
   }
 
-  // --- hover / picking -------------------------------------------------------------------------
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2(9, 9);
   let pointerInside = false;
+  let pointerMoved = true;
+  let settleUntil = 0;
+  const pickedFrom = { pos: new THREE.Vector3(Infinity, 0, 0), tgt: new THREE.Vector3() };
 
-  // Hover: outline (hull) + a small lift. Only the objects whose state changes are touched,
-  // so this never fights route animations (e.g. the resume printout lifting).
   function setHot(id) {
     if (hot === id) return;
     const prev = hot;
@@ -302,7 +267,6 @@ export function createWorld({ canvas, content, theme, on }) {
     if (mode === 'desk') {
       const hits = ray.intersectObjects(desk.scene.children, true);
       const hit = hits.find((h) => NAV_IDS.includes(h.object.userData.id));
-      // a note only for decor that is really under the pointer (nothing in front of it)
       const note = hits[0]?.object.userData.note ?? null;
       return { id: hit?.object.userData.id ?? null, photo: hit?.object.userData.photo, note };
     }
@@ -311,16 +275,14 @@ export function createWorld({ canvas, content, theme, on }) {
     return h ? { id: 'project', slug: h.slug, index: h.index } : { id: null };
   }
 
-  // Home: decor under the pointer shows its note (nav objects win)
   function setNote(key) {
     on.note?.(key, pointer);
   }
 
-  // About: hovering a photo on the sphere enlarges it and shows its caption.
   let photoHot = -1;
   const pointer = { x: 0, y: 0 };
   function setPhoto(i) {
-    if (!desk.objects.about.settled) i = -1; // no hover until every photo has reached the sphere
+    if (!desk.objects.about.settled) i = -1;
     if (photoHot !== i) {
       const frames = desk.objects.about.frames;
       const size = (f, k) => { const v = (f.userData.size ?? 1) * k; return { x: v, y: v, z: v }; };
@@ -335,6 +297,7 @@ export function createWorld({ canvas, content, theme, on }) {
   let down = null;
   canvas.addEventListener('pointermove', (e) => {
     pointerInside = true;
+    pointerMoved = true;
     pointer.x = e.clientX;
     pointer.y = e.clientY;
     ndc.set((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
@@ -359,7 +322,7 @@ export function createWorld({ canvas, content, theme, on }) {
     down = { x: e.clientX, y: e.clientY, moved: 0 };
   });
   window.addEventListener('pointerup', (e) => {
-    if (e.target === canvas) setNdc(e); // pick exactly where the click happened
+    if (e.target === canvas) setNdc(e);
     const wasClick = down && down.moved < 6;
     down = null;
     if (!wasClick || busy) return;
@@ -378,18 +341,15 @@ export function createWorld({ canvas, content, theme, on }) {
         return;
       }
       if (route === 'about') {
-        // on a short screen the bio scrolls: scrolling it reads on, without spinning the photos
         const bio = e.target.closest?.('.about');
         if (bio && bio.scrollHeight > bio.clientHeight) return;
-        desk.objects.about.drag(0, -dy * 0.35); // scrolling tumbles the photo sphere
+        desk.objects.about.drag(0, -dy * 0.35);
         return;
       }
-      // the desk itself does not scroll: you click into things
     },
     { passive: true },
   );
 
-  // --- loop -----------------------------------------------------------------------------------
   function resize() {
     const w = innerWidth, h = innerHeight;
     renderer.setSize(w, h, false);
@@ -398,7 +358,6 @@ export function createWorld({ canvas, content, theme, on }) {
     worksCam.aspect = w / h;
     worksCam.updateProjectionMatrix();
     fullRT.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
-    // allocate it now, not on the first frame of the dive into the MacBook
     renderer.setRenderTarget(fullRT);
     renderer.clear();
     renderer.setRenderTarget(null);
@@ -406,9 +365,6 @@ export function createWorld({ canvas, content, theme, on }) {
   addEventListener('resize', resize);
   resize();
 
-  // The screen is off on the desk, so the works scene isn't drawn until the dive into the
-  // MacBook. Draw it once off-screen now (shaders built for both the screen and the window,
-  // buffers allocated) so that first dive doesn't stutter.
   function warm() {
     works.preview();
     renderer.setRenderTarget(screenRT);
@@ -429,11 +385,16 @@ export function createWorld({ canvas, content, theme, on }) {
     camera.position.copy(pos);
     look.copy(tgt);
     camera.lookAt(look);
-    // Works: Index shows only the wallpaper: no ring, nothing to pick
     const bare = mode === 'works' && !!on.ringHidden?.();
     works.showRing(!bare);
 
-    if (pointerInside && !down && !busy && !bare) {
+    const changed =
+      pointerMoved || route === 'about' || mode === 'works' || performance.now() < settleUntil ||
+      !pickedFrom.pos.equals(pos) || !pickedFrom.tgt.equals(tgt);
+    if (pointerInside && !down && !busy && !bare && changed) {
+      pointerMoved = false;
+      pickedFrom.pos.copy(pos);
+      pickedFrom.tgt.copy(tgt);
       const p = pick();
       if (mode === 'desk' && route === 'home') {
         setHot(p.id);
@@ -480,26 +441,7 @@ export function createWorld({ canvas, content, theme, on }) {
     }
   });
 
-  // Screen-space bounding box of a desk object (for DOM elements that "come out" of it).
-  const box = new THREE.Box3();
-  function screenRect(id) {
-    const o = desk.objects[id];
-    if (!o) return null;
-    camera.position.copy(pos);
-    camera.lookAt(tgt);
-    camera.updateMatrixWorld();
-    box.setFromObject(o.root);
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let i = 0; i < 8; i++) {
-      v.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera);
-      const sx = (v.x * 0.5 + 0.5) * innerWidth, sy = (-v.y * 0.5 + 0.5) * innerHeight;
-      x0 = Math.min(x0, sx); x1 = Math.max(x1, sx); y0 = Math.min(y0, sy); y1 = Math.max(y1, sy);
-    }
-    return { left: x0, top: y0, width: x1 - x0, height: y1 - y0 };
-  }
-
   return {
-    screenRect,
     setRoute,
     paper: { slide: paperSlide, reset: paperReset, pose: paperPose, viewPose, toScreen, sync: syncCamera, show: (id, on) => (desk.objects[id].paper.mesh.visible = on) },
     setHot: (id) => {

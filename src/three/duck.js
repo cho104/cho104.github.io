@@ -1,17 +1,10 @@
-// The little white duckling figure on the window sill (from the room photo: fluffy white
-// body standing upright, raised neck, round head, pale bill tipped up, thin legs).
-// The body is one smooth surface: a signed-distance shape (ellipsoids blended together)
-// polygonized once with marching cubes, so neck, chest and tail flow into each other.
-// Units are metres; the origin is between the feet, facing +z.
 import * as THREE from 'three';
 import { MarchingCubes } from 'three/addons/objects/MarchingCubes.js';
 
-// --- signed distance helpers -------------------------------------------------------------
 const smin = (a, b, k) => {
   const h = Math.max(k - Math.abs(a - b), 0) / k;
   return Math.min(a, b) - h * h * k * 0.25;
 };
-// ellipsoid at c with radii r, pitched by `pitch` (radians, + raises its front end)
 function ellipsoid(p, c, r, pitch = 0) {
   let y = p[1] - c[1], z = p[2] - c[2];
   const x = p[0] - c[0];
@@ -29,15 +22,13 @@ function capsule(p, a, b, r) {
   return Math.hypot(pa[0] - ba[0] * h, pa[1] - ba[1] * h, pa[2] - ba[2] * h) - r;
 }
 
-// Polygonize sdf inside the box [min, max] (a cube is used: the longest side) into a static,
-// smooth-shaded BufferGeometry.
 function sdfGeometry(sdf, min, max, res = 64) {
   const mc = new MarchingCubes(res, new THREE.MeshBasicMaterial(), false, false, 60000);
   const c = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
   const half = Math.max(max[0] - min[0], max[1] - min[1], max[2] - min[2]) / 2;
   mc.isolation = 0;
   const hs = mc.halfsize;
-  const scale = 1 / (half * 0.0012); // field units: keep gradients well above float noise
+  const scale = 1 / (half * 0.0012);
   for (let z = 0; z < res; z++)
     for (let y = 0; y < res; y++)
       for (let x = 0; x < res; x++) {
@@ -62,22 +53,19 @@ function sdfGeometry(sdf, min, max, res = 64) {
   return g;
 }
 
-// --- the duckling's shape --------------------------------------------------------------------
 const HEAD = [0, 0.0565, 0.0105];
 function bodySdf(p) {
-  let d = ellipsoid(p, [0, 0.026, -0.002], [0.0155, 0.0148, 0.0205], 0.5); // body, front end raised
-  d = smin(d, ellipsoid(p, [0, 0.0305, 0.009], [0.0128, 0.0135, 0.0118]), 0.008); // full chest
-  d = smin(d, capsule(p, [0, 0.036, 0.007], [0, 0.05, 0.0098], 0.0078), 0.007); // short neck
-  d = smin(d, ellipsoid(p, HEAD, [0.0102, 0.0104, 0.0112], 0.15), 0.005); // round head
-  d = smin(d, ellipsoid(p, [0, 0.0215, -0.0205], [0.0055, 0.0038, 0.008], 0.75), 0.006); // stubby tail, up
-  // little folded wings at the sides
+  let d = ellipsoid(p, [0, 0.026, -0.002], [0.0155, 0.0148, 0.0205], 0.5);
+  d = smin(d, ellipsoid(p, [0, 0.0305, 0.009], [0.0128, 0.0135, 0.0118]), 0.008);
+  d = smin(d, capsule(p, [0, 0.036, 0.007], [0, 0.05, 0.0098], 0.0078), 0.007);
+  d = smin(d, ellipsoid(p, HEAD, [0.0102, 0.0104, 0.0112], 0.15), 0.005);
+  d = smin(d, ellipsoid(p, [0, 0.0215, -0.0205], [0.0055, 0.0038, 0.008], 0.75), 0.006);
   for (const s of [1, -1]) d = smin(d, ellipsoid(p, [s * 0.0128, 0.0285, -0.004], [0.0036, 0.0095, 0.0145], 0.55), 0.004);
   return d;
 }
 function billSdf(p) {
-  // flat, wide at the root and rounded at the tip, tipped up like the photo
   const flat = ellipsoid(p, [0, 0.0572, 0.0252], [0.0049, 0.0016, 0.0066], 0.5);
-  return smin(flat, ellipsoid(p, [0, 0.0558, 0.0203], [0.0058, 0.0032, 0.004], 0.5), 0.003); // wider root
+  return smin(flat, ellipsoid(p, [0, 0.0558, 0.0203], [0.0058, 0.0032, 0.004], 0.5), 0.003);
 }
 
 let cache = null;
@@ -100,17 +88,13 @@ function part(geo, material, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0 } = {
   return m;
 }
 
-// Bill, eyes, legs and webbed feet: the same on every variant.
 function details(g) {
   const { bill } = shapes();
   g.add(part(bill, mat('#e9d9b4', { roughness: 0.5 })));
-  // nostrils
   const dark = mat('#3b3228', { roughness: 0.6 });
   for (const s of [1, -1]) g.add(part(new THREE.SphereGeometry(0.0004, 6, 4), dark, { x: s * 0.0014, y: 0.0592, z: 0.0244 }));
-  // eyes: glossy black beads set into the head
   const eye = new THREE.MeshPhysicalMaterial({ color: '#111113', roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.05 });
   for (const s of [1, -1]) g.add(part(new THREE.SphereGeometry(0.0015, 14, 10), eye, { x: s * 0.0089, y: 0.0592, z: 0.0164 }));
-  // legs and three-toed webbed feet
   const leg = mat('#d9b98a', { roughness: 0.55 });
   const toe = new THREE.Shape();
   toe.moveTo(0, -0.0012);
@@ -125,12 +109,10 @@ function details(g) {
   }
 }
 
-// One smooth matte surface, like a painted figurine; a soft sheen keeps it from looking plastic.
-function smooth() {
+export function duckling() {
   const g = new THREE.Group();
   g.add(part(shapes().body, new THREE.MeshPhysicalMaterial({ color: '#f5f3ee', roughness: 0.75, sheen: 0.6, sheenRoughness: 0.6, sheenColor: '#ffffff' })));
   details(g);
   return g;
 }
 
-export const duckling = smooth;

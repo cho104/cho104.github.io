@@ -1,23 +1,18 @@
-// Where each print sits on the About sphere. Loosely scattered, like prints tossed onto a
-// ball: evenly spread points nudged off their spots, each print turned to a random angle and
-// a little bigger or smaller than the rest. The radius is then grown just until no two prints
-// overlap (checked corner to corner), so the scatter never covers a photo.
 import * as THREE from 'three';
 
 const GOLDEN = Math.PI * (3 - Math.sqrt(5));
 
 export function sphereLayout(n, w, h, { seed = 11, minR = 0.15 } = {}) {
   let s = seed;
-  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647 - 0.5; // -0.5..0.5
+  const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647 - 0.5;
   const items = Array.from({ length: n }, (_, i) => {
-    // half-step offset so no print sits exactly on a pole, then a small random nudge
     const y = THREE.MathUtils.clamp(1 - ((i + 0.5) / n) * 2 + rnd() * (0.9 / n), -0.999, 0.999);
     const th = GOLDEN * i + rnd() * 0.5;
     const r = Math.sqrt(1 - y * y);
     return {
       dir: new THREE.Vector3(Math.cos(th) * r, y, Math.sin(th) * r).normalize(),
-      roll: rnd() * 1.4, // about ±40°
-      scale: 1 + rnd() * 0.3, // 0.85 .. 1.15
+      roll: rnd() * 1.4,
+      scale: 1 + rnd() * 0.3,
     };
   });
 
@@ -36,8 +31,6 @@ export function sphereLayout(n, w, h, { seed = 11, minR = 0.15 } = {}) {
     };
   };
 
-  // do two prints overlap? Both are near-tangent quads: project them onto the plane between
-  // their normals and look for a separating axis.
   const U = new THREE.Vector3(), V = new THREE.Vector3(), N = new THREE.Vector3();
   function overlap(a, b, gap) {
     N.copy(a.p).normalize().add(b.p.clone().normalize()).normalize();
@@ -59,10 +52,8 @@ export function sphereLayout(n, w, h, { seed = 11, minR = 0.15 } = {}) {
     return true;
   }
 
-  const gap = Math.min(w, h) * 0.04; // a sliver of space between neighbours
+  const gap = Math.min(w, h) * 0.04;
   const reach = Math.hypot(w, h) * 1.15;
-  // at each radius, first try nudging overlapping pairs apart a few times; only if that
-  // doesn't clear them, grow the sphere a little and try again
   const push = new THREE.Vector3();
   let R = minR;
   for (let tries = 0; tries < 60; tries++, R *= 1.02) {

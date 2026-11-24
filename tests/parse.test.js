@@ -63,7 +63,6 @@ test('projects: org, description, media, tags, year', () => {
   assert.deepEqual(a.tags, ['PyTorch', 'NLP']);
   assert.equal(a.year, '2025');
   assert.equal(a.media[0].kind, 'image');
-  // an unindented image after a blank line still belongs to the previous project
   assert.equal(b.media[0].src, 'img/second/demo.mp4');
   assert.equal(b.media[0].kind, 'video');
 });
@@ -116,4 +115,22 @@ https://www.isca-archive.org/x/paper.pdf
   assert.deepEqual(p.links.map((l) => l.label), ['GitHub · repo', 'Paper (PDF)']);
   assert.deepEqual(p.docs, [{ src: 'img/x/talk.pdf', label: 'Slides: Talk', kind: 'pdf', thumb: 'img/x/talk.pdf.thumb.jpg' }]);
   assert.ok(d.mediaFiles.includes('img/x/talk.pdf') && d.mediaFiles.includes('img/x/talk.pdf.thumb.jpg'));
+});
+
+test('phone filter leaves ordinary numbers and URLs alone', () => {
+  const md = '# X\n\n### About\nShipped in 2024 2025 2026 releases, 2023-2024-2025 too. See https://example.com/a/1234567890123 and 010-1234-5678.\n';
+  const [bio] = parseReadme(md).about.bio;
+  assert.match(bio, /2024 2025 2026/);
+  assert.match(bio, /2023-2024-2025/);
+  assert.match(bio, /1234567890123/);
+  assert.doesNotMatch(bio, /010-1234-5678/);
+});
+
+test('README view: local doc links are root-relative and bare URLs are links', () => {
+  const md = '# X\n\n### Projects\n1. **P**\nSee https://doi.org/10.1/abc. [Slides](img/p/s.pdf) [GH](https://github.com/a/b)\n';
+  const { readmeHtml } = parseReadme(md);
+  assert.match(readmeHtml, /href="\/img\/p\/s\.pdf"/);
+  assert.match(readmeHtml, /<a href="https:\/\/doi\.org\/10\.1\/abc" rel="noopener">https:\/\/doi\.org\/10\.1\/abc<\/a>\./);
+  assert.match(readmeHtml, /href="https:\/\/github\.com\/a\/b" rel="noopener">GH<\/a>/);
+  assert.doesNotMatch(readmeHtml, /<a[^>]*>[^<]*<a/);
 });

@@ -17,7 +17,6 @@ function hasWebGL() {
   }
 }
 
-// Phones (and browsers without WebGL) get the README as a page; desktops get the desk.
 const phone =
   matchMedia('(max-width: 760px)').matches ||
   matchMedia('(pointer: coarse) and (max-width: 1100px)').matches;

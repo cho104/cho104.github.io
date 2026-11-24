@@ -8,7 +8,6 @@ const root = dirname(fileURLToPath(import.meta.url));
 const README = resolve(root, 'README.md');
 const ID = 'virtual:content';
 
-// README.md → `import content from 'virtual:content'`. Editing README reloads the page in dev.
 function readmeContent() {
   return {
     name: 'readme-content',

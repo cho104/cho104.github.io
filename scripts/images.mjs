@@ -1,24 +1,18 @@
-// Web versions of the photos: img/_originals/<path> → img/<path>
-//   <name>.jpg        max 1800px, for project cards, the resume page and README
-//   <name>.thumb.jpg  max 640px, for 3D textures (wall photos, ring panels) and previews
-//   <name>.pdf        documents (slides, reports) are copied as they are, plus
-//   <name>.pdf.thumb.jpg, a preview of the first page (rendered with macOS `sips`)
-// Metadata (EXIF, including GPS location) is stripped; orientation is applied first.
-// Originals stay local: img/_originals is git-ignored. reference/, wallpaper/, room/,
-// private/ and unused/ (taken off the site) are never converted.
-//
-// Usage: npm run images         (only converts files that changed)
-//        npm run images -- --all
 import sharp from 'sharp';
 import { readdirSync, statSync, mkdirSync, existsSync, copyFileSync, rmSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { join, dirname, relative, extname } from 'node:path';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const src = join(root, 'img/_originals');
 const out = join(root, 'img');
 const all = process.argv.includes('--all');
+if (!existsSync(src)) {
+  console.log('images: no img/_originals folder here (originals stay local), nothing to convert');
+  process.exit(0);
+}
 
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((d) =>
@@ -47,8 +41,6 @@ for (const file of walk(src)) {
     continue;
   }
   if (!['.jpg', '.jpeg', '.png', '.webp', '.heic'].includes(ext)) continue;
-  // never converted: modelling references, the sources of the Works wallpaper and of the
-  // window view (their web copies live in public/works and public/room), and anything held back
   if (/^(reference|wallpaper|room|private|unused)\//.test(rel)) continue;
   const isPng = ext === '.png';
   const base = join(out, rel.slice(0, -ext.length));
@@ -56,10 +48,22 @@ for (const file of walk(src)) {
   const thumb = base + '.thumb.jpg';
   if (!all && existsSync(full) && existsSync(thumb) && statSync(full).mtimeMs > statSync(file).mtimeMs) continue;
   mkdirSync(dirname(full), { recursive: true });
-  const img = () => sharp(file, { failOn: 'none' }).rotate();
+  let input = file, tmp = '';
+  if (ext === '.heic') {
+    tmp = join(tmpdir(), `heic-${process.pid}.jpg`);
+    try {
+      execFileSync('sips', ['-s', 'format', 'jpeg', file, '--out', tmp], { stdio: 'ignore' });
+      input = tmp;
+    } catch {
+      console.warn(`  ! skipped ${rel} (HEIC needs macOS sips)`);
+      continue;
+    }
+  }
+  const img = () => sharp(input, { failOn: 'none' }).rotate();
   const big = img().resize(1800, 1800, { fit: 'inside', withoutEnlargement: true });
   await (isPng ? big.png({ compressionLevel: 9, palette: true }) : big.jpeg({ quality: 78, mozjpeg: true })).toFile(full);
   await img().resize(640, 640, { fit: 'inside', withoutEnlargement: true }).jpeg({ quality: 76, mozjpeg: true }).toFile(thumb);
+  if (tmp) rmSync(tmp, { force: true });
   made++;
 }
 console.log(`images: ${made} converted`);

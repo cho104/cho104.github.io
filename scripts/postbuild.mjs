@@ -1,10 +1,9 @@
-// After `vite build`: copy media the README references, and give every route its own
-// index.html so deep links work on GitHub Pages (which has no SPA fallback).
 import { readFileSync, writeFileSync, mkdirSync, copyFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseReadme } from '../src/content/parse.js';
 
-const root = new URL('..', import.meta.url).pathname;
+const root = fileURLToPath(new URL('..', import.meta.url));
 const dist = join(root, 'dist');
 const data = parseReadme(readFileSync(join(root, 'README.md'), 'utf8'), { exists: (p) => existsSync(join(root, p)) });
 

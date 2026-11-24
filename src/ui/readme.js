@@ -1,5 +1,3 @@
-// The phone page: README.md rendered as a styled page (no 3D). Contact lines are rebuilt
-// from parsed data at build time, so the phone number never appears.
 export function renderReadme(content) {
   document.body.classList.add('is-readme');
   for (const sel of ['#gl', '.nav', '.page-title', '#labels', '.hint', '#intro']) {
@@ -11,7 +9,6 @@ export function renderReadme(content) {
   document.getElementById('view').replaceWith(article);
 }
 
-// Email copies instead of opening a mail app (same as the desktop Contact page).
 document.addEventListener('click', async (e) => {
   const a = e.target.closest?.('a[href^="mailto:"]');
   if (!a || !document.body.classList.contains('is-readme')) return;
@@ -20,6 +17,7 @@ document.addEventListener('click', async (e) => {
   try {
     await navigator.clipboard.writeText(email);
   } catch {
+    location.href = a.href;
     return;
   }
   const s = document.createElement('div');

@@ -1,24 +1,10 @@
-// Turns README.md into the data the site renders.
-// Runs at build time (Vite plugin) and in tests; never in the browser.
-//
-// README conventions (also documented in a hidden comment inside README.md):
-//   ### About              paragraphs = bio, images = photos on the wall / About sphere
-//   ### Education ...      #### School headings, each followed by a numbered course list;
-//                          "(Current)" before a course marks it as in progress
-//   ### Projects ...       numbered items: **Title** (Organization), description on the next line,
-//                          optional images/videos (![alt](img/...)) and an optional line
-//                          "tags: A, B · 2025"
-//   ### Honors / ### Certificates   numbered items, **Title** + details
-//   Links in any entry: a bare URL or [label](url) on its own line or after the images becomes
-//   a link button (labelled from the site when no label is given); [label](img/....pdf|.html)
-//   attaches a local document (slides, report) that the build publishes with the site.
-// Phone numbers are scrubbed everywhere; contact output is email + GitHub only.
-
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { toString } from 'mdast-util-to-string';
 
-const PHONE = /\+?\d{1,3}[\s.-]?\(?\d{2,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{4}/g;
+const PHONE =
+  /(?<![\w+])(?:\+\d{1,3}[\s.-]?\(?\d{1,4}\)?[\s.-]?\d{3,4}[\s.-]?\d{4}|(?!(?:19|20)\d\d[.-](?:19|20)\d\d)\(?\d{2,4}\)?[.-]\d{3,4}[.-]\d{4}|\(\d{2,4}\)\s?\d{3,4}[\s.-]\d{4})(?!\w)/g;
 const VIDEO = /\.(mp4|webm|mov)$/i;
+const URL_RE = /https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"]/g;
 
 export function slugify(s) {
   return s
@@ -31,10 +17,10 @@ export function slugify(s) {
 }
 
 function scrub(text) {
-  return text.replace(PHONE, '').replace(/(\s*\|\s*)+$/g, '').replace(/^\s*\|\s*/g, '');
+  const parts = text.split(new RegExp(`(${URL_RE.source})`));
+  return parts.map((p, i) => (i % 2 ? p : p.replace(PHONE, ''))).join('').replace(/(\s*\|\s*)+$/g, '').replace(/^\s*\|\s*/g, '');
 }
 
-// Remove phone numbers from every text node in place.
 function scrubTree(node) {
   if (node.type === 'text') node.value = scrub(node.value);
   if (node.children) node.children.forEach(scrubTree);
@@ -46,7 +32,6 @@ function collect(node, type, out = []) {
   return out;
 }
 
-// <img src="…" alt="…" width="160"> in the README (compact thumbnails on GitHub).
 function htmlImages(value) {
   return [...value.matchAll(/<img\b[^>]*>/gi)].map((m) => {
     const attr = (name) => (m[0].match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, 'i')) || [])[1] || '';
@@ -54,7 +39,6 @@ function htmlImages(value) {
   }).filter((i) => i.url);
 }
 
-// Images and videos inside a node, in document order: ![alt](src) and <img src>.
 function media(node) {
   const out = [];
   const walk = (n) => {
@@ -68,10 +52,7 @@ function media(node) {
 
 const plain = (n) => toString(n, { includeImageAlt: false, includeHtml: false });
 
-// --- links and documents in an entry --------------------------------------------------------
-const URL_RE = /https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"]/g;
 const DOC = /\.(pdf|html?)$/i;
-// A readable label for a bare URL, from where it points.
 export function linkLabel(url) {
   let u;
   try { u = new URL(url); } catch { return url; }
@@ -87,8 +68,6 @@ export function linkLabel(url) {
   if (host === 'drive.google.com' || host === 'docs.google.com') return 'Google Drive';
   return host;
 }
-// Pull the links out of an entry: [label](url) nodes and bare URLs in its text.
-// Local documents (img/....pdf/.html) come back separately.
 function linksIn(node) {
   const links = [], docs = [], seen = new Set();
   const add = (url, label) => {
@@ -107,14 +86,12 @@ function linksIn(node) {
   for (const h of collect(node, 'html')) for (const m of h.value.replace(/<img\b[^>]*>/gi, '').matchAll(URL_RE)) add(m[0]);
   return { links, docs };
 }
-// The text of an entry line with its links taken out.
 function stripLinks(line, labels) {
   let out = line.replace(URL_RE, ' ');
   for (const l of labels) if (l) out = out.split(l).join(' ');
   return out.replace(/\s{2,}/g, ' ').trim();
 }
 
-// Splits the document into { name, key, nodes } by "###" headings.
 function sections(tree) {
   const out = [];
   let current = { name: '_preamble', key: '_preamble', nodes: [] };
@@ -141,7 +118,6 @@ function sectionKey(name) {
   return slugify(name);
 }
 
-// "**Title** (Org)  \n description ... tags: a, b · 2025" → structured entry
 function entry(item) {
   const strong = collect(item, 'strong')[0];
   const title = strong ? toString(strong).trim() : toString(item).split('\n')[0].trim();
@@ -158,14 +134,13 @@ function entry(item) {
     const m = first.match(/^\(([^)]*)\)\s*(.*)$/);
     if (m) {
       org = m[1].trim();
-      if (/^\d{4}$/.test(org)) { // "**Title** (2025)" is a year, not an organisation
+      if (/^\d{4}$/.test(org)) {
         year = org;
         org = '';
       }
       if (m[2]) lines[0] = m[2];
       else lines.shift();
     } else if (/^,/.test(first)) {
-      // Honors style: "**Title**, Nationwide (2022)"
       meta = first.replace(/^,\s*/, '');
       lines.shift();
     }
@@ -203,8 +178,6 @@ function entry(item) {
   };
 }
 
-// Numbered lists in a section; images in loose paragraphs attach to the previous entry
-// (so an unindented image line after a blank line still belongs to its project).
 function entries(nodes) {
   const out = [];
   for (const node of nodes) {
@@ -264,19 +237,25 @@ function contact(preamble) {
   };
 }
 
-// --- Minimal mdast → HTML, used for the phone page ---------------------------------
 const esc = (s) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-let thumbOf = (src) => src; // set per parse: uses "<name>.thumb.jpg" when it exists
+let thumbOf = (src) => src;
 
-function html(node) {
-  const kids = () => (node.children || []).map(html).join('');
+const href = (url) => (/^([a-z][a-z0-9+.-]*:|\/|#)/i.test(url) ? url : '/' + url.replace(/^\.\//, ''));
+const autolink = (value) =>
+  value
+    .split(new RegExp(`(${URL_RE.source})`))
+    .map((p, i) => (i % 2 ? `<a href="${esc(p)}" rel="noopener">${esc(p)}</a>` : esc(p)))
+    .join('');
+
+function html(node, inLink = false) {
+  const kids = () => (node.children || []).map((c) => html(c, inLink || node.type === 'link')).join('');
   switch (node.type) {
     case 'root': return kids();
     case 'heading': return `<h${node.depth}>${kids()}</h${node.depth}>`;
     case 'paragraph': return `<p>${kids()}</p>`;
-    case 'text': return esc(node.value);
+    case 'text': return inLink ? esc(node.value) : autolink(node.value);
     case 'strong': return `<strong>${kids()}</strong>`;
     case 'emphasis': return `<em>${kids()}</em>`;
     case 'inlineCode': return `<code>${esc(node.value)}</code>`;
@@ -284,7 +263,7 @@ function html(node) {
     case 'break': return '<br>';
     case 'thematicBreak': return '<hr>';
     case 'blockquote': return `<blockquote>${kids()}</blockquote>`;
-    case 'link': return `<a href="${esc(node.url)}" rel="noopener">${kids()}</a>`;
+    case 'link': return `<a href="${esc(href(node.url))}" rel="noopener">${kids()}</a>`;
     case 'image':
       return VIDEO.test(node.url)
         ? `<video src="/${esc(node.url.replace(/^\.?\//, ''))}" muted playsinline controls preload="metadata"></video>`
@@ -294,7 +273,7 @@ function html(node) {
       return `<${tag}>${kids()}</${tag}>`;
     }
     case 'listItem': return `<li>${kids()}</li>`;
-    case 'html': // only <img> tags are rendered; comments and other HTML are dropped
+    case 'html':
       return htmlImages(node.value)
         .map((i) => `<img class="thumb" src="/${esc(thumbOf(i.url.replace(/^\.?\//, '')))}" alt="${esc(i.alt)}" loading="lazy">`)
         .join('');
@@ -302,7 +281,6 @@ function html(node) {
   }
 }
 
-// First-page preview of a document, written by `npm run images`: slides.pdf → slides.pdf.thumb.jpg
 export const docThumb = (src) => `${src}.thumb.jpg`;
 
 export function parseReadme(markdown, { exists = () => false } = {}) {
@@ -310,7 +288,6 @@ export function parseReadme(markdown, { exists = () => false } = {}) {
   thumbOf = (src) => (exists(thumbPath(src)) ? thumbPath(src) : src);
   const tree = fromMarkdown(markdown);
   scrubTree(tree);
-  // "# Your Name" at the top is the site owner's name.
   const h1 = tree.children.find((n) => n.type === 'heading' && n.depth === 1);
   const name = h1 ? toString(h1).trim() : '';
   if (h1) tree.children.splice(tree.children.indexOf(h1), 1);
@@ -336,7 +313,6 @@ export function parseReadme(markdown, { exists = () => false } = {}) {
     readmeHtml: '',
   };
 
-  // Phone page: README as-is, except the contact lines are rebuilt from the scrubbed data.
   const c = data.contact;
   const contactHtml = [
     c.email && `<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>`,
@@ -346,9 +322,8 @@ export function parseReadme(markdown, { exists = () => false } = {}) {
   data.readmeHtml =
     (name ? `<h1>${esc(name)}</h1>` : '') +
     `<p class="readme-contact">${contactHtml}</p>` +
-    body.map(html).join('');
+    body.map((n) => html(n)).join('');
 
-  // Make project slugs unique.
   const seen = new Map();
   for (const p of data.projects) {
     const n = seen.get(p.slug) || 0;
@@ -356,7 +331,6 @@ export function parseReadme(markdown, { exists = () => false } = {}) {
     if (n) p.slug = `${p.slug}-${n + 1}`;
   }
 
-  // Thumbnails for every local image, and the list of files the build must publish.
   const groups = [data.about.photos, ...[...data.projects, ...data.honors, ...data.certificates].map((e) => e.media)];
   for (const list of groups) for (const m of list) if (m.kind === 'image') m.thumb = thumbOf(m.src);
   const local = (s) => s && !/^https?:/i.test(s);

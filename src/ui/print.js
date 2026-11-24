@@ -1,5 +1,3 @@
-// /resume/print: the resume as a plain document, opened in its own tab from the resume
-// sheet. It opens the browser's print dialog, where "Save as PDF" is one of the printers.
 import { resumeBody } from './views.js';
 
 export function renderPrint(content) {

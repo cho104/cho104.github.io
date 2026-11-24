@@ -1,17 +1,9 @@
-// A DOM page that is a real sheet of paper on the desk (the coursework page in the notebook,
-// the clipped resume). Taking it out: the 3D sheet slides out, then the DOM page appears
-// exactly over it and flies up to the reading position. Putting it back is the same in reverse.
-//
-// In flight the sheet is a rigid 3D rectangle (position, rotation, size interpolated between
-// the sheet on the desk and a pose facing the camera); its four projected corners are mapped
-// onto the DOM element with a CSS matrix3d (a homography), so the HTML looks like that sheet.
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 
 const UP = new THREE.Vector3(0, 1, 0);
-const CORNERS = [[-0.5, 0.5], [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]]; // TL TR BR BL, in page units
+const CORNERS = [[-0.5, 0.5], [0.5, 0.5], [0.5, -0.5], [-0.5, -0.5]];
 
-// CSS matrix3d taking the element's box (w × h, origin top-left) onto the quad q (TL TR BR BL).
 function quadMatrix(w, h, q) {
   const [[x0, y0], [x1, y1], [x2, y2], [x3, y3]] = q;
   const dx1 = x1 - x2, dx2 = x3 - x2, dx3 = x0 - x1 + x2 - x3;
@@ -42,7 +34,6 @@ export function paperFlight(el, paper, id) {
 
   function frame() {
     const t = st.t;
-    // the DOM page fades in over the 3D sheet during the first moments, then replaces it
     el.style.opacity = String(Math.min(1, t / 0.1));
     paper.show(id, t < 0.12);
     if (t >= 1) {
@@ -75,7 +66,6 @@ export function paperFlight(el, paper, id) {
   el.style.visibility = 'hidden';
 
   return {
-    // take it out: slide the 3D sheet, then fly the page up
     async out() {
       const my = ++token;
       if (st.t === 0) {
@@ -87,7 +77,6 @@ export function paperFlight(el, paper, id) {
       frame();
       await fly(1, 1.15, 'power3.inOut');
     },
-    // put it back: fly the page down onto the sheet, then slide the sheet home
     async back() {
       const my = ++token;
       if (st.t > 0) {
@@ -98,7 +87,6 @@ export function paperFlight(el, paper, id) {
       paper.show(id, true);
       await paper.slide(id, false, 0.45);
     },
-    // the view is being thrown away (e.g. a reload of the route): leave the desk tidy
     reset() {
       ++token;
       gsap.killTweensOf(st);

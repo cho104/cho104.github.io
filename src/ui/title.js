@@ -1,5 +1,3 @@
-// Grégory-style nav: the current page's nav word grows into the huge page title, and the
-// previous title shrinks back into its nav word (FLIP between the two rectangles).
 import { gsap } from 'gsap';
 
 const title = () => document.querySelector('.page-title');
@@ -28,7 +26,6 @@ export function setTitle(route, text) {
 
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  // Shrink the old title back into its nav word.
   if (prev && prev !== route && t.textContent && !reduce) {
     const link = linkFor(prev);
     const clone = t.cloneNode(true);
@@ -52,7 +49,6 @@ export function setTitle(route, text) {
   t.textContent = text || '';
   if (!text) return;
 
-  // Grow the new title out of its nav word.
   const link = linkFor(route);
   if (!link || reduce) return;
   const small = link.getBoundingClientRect();
