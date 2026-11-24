@@ -78,7 +78,7 @@ Analyzed water data and reviewed Orange County’s water scorecard. Assessed con
 
 8. **Summer Deep Learning Research Internship** (George Mason University)  
 Conducted research on sockpuppet detection in Wikipedia, focusing on feature selection for automated systems under Dr. Mihai Boicu. Contributed to a systematic review, gaining experience in data analysis fine-tuning pre-trained Pytorch models. Published the work to the student journal.
-<img src="img/projects/gmu/01-poster.jpg" width="160"> <img src="img/projects/gmu/02-program.jpg" width="160"> <img src="img/projects/gmu/03-poster-session.jpg" width="160"> <img src="img/projects/gmu/04-poster-session.jpg" width="160">
+<img src="img/projects/gmu/01-poster.jpg" width="160"> <img src="img/projects/gmu/02-program.jpg" width="160"> <img src="img/projects/gmu/03-poster-session.jpg" width="160"> <img src="img/projects/gmu/04-poster-session.jpg" width="160"> https://doi.org/10.13021/jssr2023.3851
 
 9. **Summer Deep Learning Research Internship** (American University)  
 Researched online sexism in sports under Dr. Maria Barouti. Analyzed data, selected features, and built a decision tree to develop a working detection model. Calculated the information gain to experiment which best describes sexism. Received scholarship during research and gained experience in designing machine learning models serving the humanities.
