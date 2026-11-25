@@ -34,7 +34,7 @@ function collect(node, type, out = []) {
 
 function htmlImages(value) {
   return [...value.matchAll(/<img\b[^>]*>/gi)].map((m) => {
-    const attr = (name) => (m[0].match(new RegExp(`\\b${name}\\s*=\\s*["']([^"']*)["']`, 'i')) || [])[1] || '';
+    const attr = (name) => (m[0].match(new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'i')) || [])[2] || '';
     return { url: attr('src'), alt: attr('alt') };
   }).filter((i) => i.url);
 }
@@ -50,7 +50,10 @@ function media(node) {
   return out.map((i) => ({ src: i.url.replace(/^\.?\//, ''), alt: i.alt, kind: VIDEO.test(i.url) ? 'video' : 'image' }));
 }
 
-const plain = (n) => toString(n, { includeImageAlt: false, includeHtml: false });
+const plain = (n) =>
+  n.type === 'break' ? '\n'
+  : n.children ? n.children.map(plain).join('')
+  : toString(n, { includeImageAlt: false, includeHtml: false });
 
 const DOC = /\.(pdf|html?)$/i;
 export function linkLabel(url) {
@@ -281,12 +284,14 @@ function html(node, inLink = false) {
   }
 }
 
-export const docThumb = (src) => `${src}.thumb.jpg`;
+export const unhideSiteOnly = (md) => md.replace(/<!-- site-only ?([\s\S]*?) ?-->/g, '$1');
+
+export const docThumb =(src) => `${src}.thumb.jpg`;
 
 export function parseReadme(markdown, { exists = () => false } = {}) {
   const thumbPath = (src) => src.replace(/\.(jpe?g|png|webp)$/i, '.thumb.jpg');
   thumbOf = (src) => (exists(thumbPath(src)) ? thumbPath(src) : src);
-  const tree = fromMarkdown(markdown);
+  const tree = fromMarkdown(unhideSiteOnly(markdown));
   scrubTree(tree);
   const h1 = tree.children.find((n) => n.type === 'heading' && n.depth === 1);
   const name = h1 ? toString(h1).trim() : '';

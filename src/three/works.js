@@ -154,6 +154,7 @@ export function buildWorks({ content, theme, renderer }) {
         v.addEventListener('loadeddata', () => {
           const t = new THREE.VideoTexture(v);
           t.colorSpace = THREE.SRGBColorSpace;
+          uniforms.uMap.value.dispose();
           uniforms.uMap.value = t;
           uniforms.uImageAspect.value = v.videoWidth / v.videoHeight;
         });
@@ -162,6 +163,7 @@ export function buildWorks({ content, theme, renderer }) {
         loader.load(src, (t) => {
           t.colorSpace = THREE.SRGBColorSpace;
           t.anisotropy = renderer.capabilities.getMaxAnisotropy();
+          uniforms.uMap.value.dispose();
           uniforms.uMap.value = t;
           uniforms.uImageAspect.value = t.image.width / t.image.height;
           renderer.initTexture(t);
@@ -214,7 +216,10 @@ export function buildWorks({ content, theme, renderer }) {
       scene.background = new THREE.Color(t === 'dark' ? '#1d252d' : '#f7f7f5');
       night = t === 'dark' ? 1 : 0;
       panels.forEach((pn) => {
-        if (!pn.project.media[0]) pn.uniforms.uMap.value = panelTexture(pn.project, pn.mesh.userData.index, t);
+        if (!pn.project.media[0]) {
+          pn.uniforms.uMap.value.dispose();
+          pn.uniforms.uMap.value = panelTexture(pn.project, pn.mesh.userData.index, t);
+        }
       });
     },
     update(dt) {

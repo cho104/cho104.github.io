@@ -96,7 +96,17 @@ export function createWorld({ canvas, content, theme, on }) {
       tween(pos, { x: p[0] ?? p.x, y: p[1] ?? p.y, z: p[2] ?? p.z, duration, ease }),
       tween(tgt, { x: t[0] ?? t.x, y: t[1] ?? t.y, z: t[2] ?? t.z, duration, ease }),
       tween(camera, { fov, duration, ease, onUpdate: () => camera.updateProjectionMatrix() }),
-    ]);
+    ]).then((r) => (refit(), r));
+  }
+
+  function refit() {
+    const shot = SHOTS[route];
+    if (mode !== 'desk' || !shot || gsap.getTweensOf([pos, tgt, camera]).length) return;
+    const [p, t, fov] = fit(shot);
+    pos.set(...p);
+    tgt.set(...t);
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
   }
 
   const WORKS_POS = new THREE.Vector3(0, 0.15, 0);
@@ -162,7 +172,7 @@ export function createWorld({ canvas, content, theme, on }) {
 
     if (next === 'works') return enterWorks(my);
     if (mode === 'works') leaveWorks();
-    else if (fadeMat.opacity > 0) {
+    else if (fadeMat.opacity > 0 || gsap.getTweensOf(fadeMat).length) {
       gsap.to(fadeMat, { opacity: 0, duration: 0.35, ease: 'power1.out', overwrite: true });
       setPower(false, 0.5);
     }
@@ -357,6 +367,7 @@ export function createWorld({ canvas, content, theme, on }) {
     camera.updateProjectionMatrix();
     worksCam.aspect = w / h;
     worksCam.updateProjectionMatrix();
+    refit();
     fullRT.setSize(w * renderer.getPixelRatio(), h * renderer.getPixelRatio());
     renderer.setRenderTarget(fullRT);
     renderer.clear();

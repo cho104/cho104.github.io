@@ -22,7 +22,11 @@ function parse(path) {
   const p = path.replace(/\/+$/, '') || '/';
   if (p === '/') return { name: 'home' };
   const m = p.match(/^\/works\/([^/]+)$/);
-  if (m) return { name: 'works', slug: decodeURIComponent(m[1]) };
+  if (m) {
+    let slug = m[1];
+    try { slug = decodeURIComponent(slug); } catch {}
+    return { name: 'works', slug };
+  }
   const name = p.slice(1);
   return TITLES[name] !== undefined ? { name } : { name: 'home' };
 }
@@ -152,7 +156,10 @@ export async function start(content) {
 
   function openCard(slug) {
     const p = content.projects.find((x) => x.slug === slug);
-    if (!p) return;
+    if (!p) {
+      closeCard();
+      return;
+    }
     if (!card) returnFocus = document.activeElement;
     closeCard(true);
     card = V.projectCard(p, { onClose: () => go('/works') });
@@ -174,6 +181,7 @@ export async function start(content) {
 
   let seq = 0;
   async function apply(route) {
+    if (!route.slug && !current.slug && current.name === route.name) return;
     const my = ++seq;
     const prev = current;
     current = route;
@@ -196,7 +204,6 @@ export async function start(content) {
       return;
     }
     closeCard();
-    if (prev.name === route.name && !prev.slug) return;
     if (prev.name === 'works' && prev.slug && route.name === 'works') return;
     setTitle(route.name, TITLES[route.name]);
     render(route);

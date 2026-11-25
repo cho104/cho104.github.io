@@ -134,3 +134,49 @@ test('README view: local doc links are root-relative and bare URLs are links', (
   assert.match(readmeHtml, /href="https:\/\/github\.com\/a\/b" rel="noopener">GH<\/a>/);
   assert.doesNotMatch(readmeHtml, /<a[^>]*>[^<]*<a/);
 });
+
+test('hard line breaks keep link lines apart from the description', () => {
+  const md = [
+    '### Projects',
+    '1. **Thing** (Lab)  ',
+    '   Did a thing.  ',
+    '   https://example.com/a  ',
+    '   [Slides: Talk](img/thing/talk.pdf)',
+    '',
+  ].join('\n');
+  const [p] = parseReadme(md).projects;
+  assert.equal(p.org, 'Lab');
+  assert.equal(p.description, 'Did a thing.');
+  assert.deepEqual(p.links.map((l) => l.url), ['https://example.com/a']);
+  assert.deepEqual(p.docs.map((d) => d.src), ['img/thing/talk.pdf']);
+});
+
+test('site-only comments are hidden on GitHub but parsed by the site', () => {
+  const md = [
+    '### Projects',
+    '1. **Thing** (Lab)  ',
+    '   Did a thing.  ',
+    '   <img src="img/a.jpg" width="160"> <!-- site-only <img src="img/b.jpg" width="160"> -->  ',
+    '   https://example.com/a  <!-- site-only',
+    '   https://example.com/b  ',
+    '   [Slides: Talk](img/thing/talk.pdf) -->',
+    '',
+  ].join('\n');
+  const [p] = parseReadme(md).projects;
+  assert.equal(p.description, 'Did a thing.');
+  assert.deepEqual(p.media.map((m) => m.src), ['img/a.jpg', 'img/b.jpg']);
+  assert.deepEqual(p.links.map((l) => l.url), ['https://example.com/a', 'https://example.com/b']);
+  assert.deepEqual(p.docs.map((d) => d.src), ['img/thing/talk.pdf']);
+});
+
+test('image alt text keeps apostrophes inside double quotes', () => {
+  const md = [
+    '### Projects',
+    '1. **Thing** (Lab)  ',
+    '   Did a thing.  ',
+    `   <img src="img/a.jpg" alt="Life's good." width="160"> <img src='img/b.jpg' alt='Say "hi"'>`,
+    '',
+  ].join('\n');
+  const [p] = parseReadme(md).projects;
+  assert.deepEqual(p.media.map((m) => m.alt), ["Life's good.", 'Say "hi"']);
+});

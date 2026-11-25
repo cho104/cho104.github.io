@@ -379,8 +379,8 @@ function lamp() {
   root.add(knuckle(B, 0.0075, 0.018), knuckle(E, 0.0072, 0.017), knuckle(apex, 0.0066, 0.016));
 
   head.add(mesh(new THREE.ConeGeometry(0.06, 0.1, 48, 1, true), orange));
-  const inner = new THREE.ConeGeometry(0.0582, 0.097, 48, 1, true);
-  inner.translate(0, 0.0015, 0);
+  const inner = new THREE.ConeGeometry(0.0588, 0.0996, 48, 1, true);
+  inner.translate(0, 0.0002, 0);
   head.add(fine(mesh(inner, mat('#f3ede2', { roughness: 0.6, side: THREE.BackSide }), { cast: false })));
   head.add(fine(mesh(new THREE.TorusGeometry(0.0592, 0.0014, 10, 64), orange, { y: -0.0496, rx: Math.PI / 2 })));
   head.add(mesh(new THREE.CylinderGeometry(0.009, 0.012, 0.014, 24), orange, { y: 0.054 }));

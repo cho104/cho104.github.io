@@ -62,9 +62,12 @@ body[data-wall] .works-caption a:hover { text-decoration: underline; text-underl
 .nav-home {
   font-weight: 600; text-decoration: none; margin-right: auto;
   font-size: clamp(22px, 1.9vw, 32px); letter-spacing: -0.025em; line-height: 1;
-  transition: opacity 0.5s var(--ease);
+  transition: opacity 0.5s var(--ease), visibility 0s linear 0s;
 }
-body[data-route]:not([data-route='home']) .nav-home { opacity: 0; pointer-events: none; }
+body[data-route]:not([data-route='home']) .nav-home {
+  opacity: 0; pointer-events: none; visibility: hidden;
+  transition: opacity 0.5s var(--ease), visibility 0s linear 0.5s;
+}
 .nav-links { display: flex; gap: 0.35em; }
 .nav-links a, .nav-theme {
   text-decoration: none; color: var(--muted);

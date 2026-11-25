@@ -6,7 +6,7 @@ import './styles.css';
 import content from 'virtual:content';
 import { renderReadme } from './ui/readme.js';
 
-document.title = content.name ? `${content.name}: Portfolio` : 'Portfolio';
+document.title = content.name || 'Chioh Lee';
 
 function hasWebGL() {
   try {
