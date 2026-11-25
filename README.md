@@ -68,7 +68,7 @@ Away from my desk, you can find me restoring vintage keyboards, birdwatching, ou
 
 6. **Volunteer Data Scientist** (ENGin: Ukrainian Humanitarian/Educational Organization)  
    Analyzed volunteer and student participation data for an international nonprofit. Provided insights to improve engagement and program effectiveness using R.  
-   <img src="img/projects/engin/01-session.jpg" width="160"> <!-- site-only <img src="img/projects/engin/02-class.jpg" width="160"> <img src="img/projects/engin/03-lesson-plan.jpg" width="160"> <img src="img/projects/engin/04-level-by-age.png" alt="Interviewer-rated English level by age group" width="160"> <img src="img/projects/engin/05-self-vs-interviewer.png" alt="Self-rated vs. interviewer-rated level" width="160"> <img src="img/projects/engin/06-student-words.png" alt="Why students join: most frequent words" width="160"> <img src="img/projects/engin/07-volunteer-words.png" alt="Why volunteers join: most frequent words" width="160"> <img src="img/projects/engin/08-buddy-preference.png" alt="Preferred speaking-buddy gender, by student gender" width="160"> -->
+   <img src="img/projects/engin/06-student-words.png" alt="Why students join: most frequent words" width="160"> <!-- site-only <img src="img/projects/engin/03-lesson-plan.jpg" width="160"> <img src="img/projects/engin/04-level-by-age.png" alt="Interviewer-rated English level by age group" width="160"> <img src="img/projects/engin/05-self-vs-interviewer.png" alt="Self-rated vs. interviewer-rated level" width="160"> <img src="img/projects/engin/06-student-words.png" alt="Why students join: most frequent words" width="160"> <img src="img/projects/engin/07-volunteer-words.png" alt="Why volunteers join: most frequent words" width="160"> <img src="img/projects/engin/08-buddy-preference.png" alt="Preferred speaking-buddy gender, by student gender" width="160"> <img src="img/projects/engin/01-session.jpg" width="160"> <img src="img/projects/engin/02-class.jpg" width="160"> -->
 
 7. **Volunteer Data Scientist / Water Scorecard Reviewer** (Sierra Club Water Committee)  
    Analyzed water data and reviewed Orange County’s water scorecard. Assessed conservation efforts, gaining experience in environmental data analysis and policy evaluation using R.  
@@ -98,9 +98,9 @@ Away from my desk, you can find me restoring vintage keyboards, birdwatching, ou
 13. **AI Developers Club Vice President** (Pusan National University)  
     Wrote and published two deep learning methodology review articles during my time in the research group. Presented some research and development trends during the seminars. Currently serving as the research group leader, the recommender system team mentor, and the vice president of the club since fall 2026.  
     <img src="img/projects/aid/06-distillation-talk.jpg" alt="Presenting soft vs. hard-label distillation" width="160"> <!-- site-only <img src="img/projects/aid/01-presentation.jpg" width="160"> <img src="img/projects/aid/02-club.jpg" width="160"> <img src="img/projects/aid/04-trend-review-talk.jpg" alt="AI Trend Review seminar" width="160"> <img src="img/projects/aid/05-distillation-seminar.jpg" alt="November seminar: knowledge distillation" width="160"> <img src="img/projects/aid/03-gaussian-splatting.png" alt="From a research group column: point cloud and 3D Gaussian Splatting render" width="160"> -->  
-    https://velog.io/@aideveloper/25-1-AI-%EB%85%BC%EB%AC%B8%EB%A6%AC%EB%94%A9-%EC%8A%A4%ED%84%B0%EB%94%94-%EA%B2%B0%EC%82%B0-2511bt70  <!-- site-only
+    https://github.com/cho104/AIResearchers  <!-- site-only
     https://github.com/zeehy/AID_AI_PaperReview_Study  
-    https://github.com/cho104/AIResearchers  
+    https://velog.io/@aideveloper/25-1-AI-%EB%85%BC%EB%AC%B8%EB%A6%AC%EB%94%A9-%EC%8A%A4%ED%84%B0%EB%94%94-%EA%B2%B0%EC%82%B0-2511bt70
     https://app.notion.com/p/aidpnu/30ef0e0d194f80ebb814df744ff2ad23  
     [Slides: AI Trend Review](img/projects/aid/trend-review.pdf)  
     [Slides: CLIP variants, DINO and distillation seminars](img/projects/aid/clip-dino-distillation-seminars.pdf)  
